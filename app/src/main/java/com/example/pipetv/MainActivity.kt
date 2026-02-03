@@ -27,11 +27,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            PipeTVTheme {
-                MainScreen()
-            }
-        }
+        setContent { PipeTVTheme { MainScreen() } }
     }
 }
 
@@ -40,12 +36,9 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isRefreshing by remember { mutableStateOf(false) }
-    
-    // Column count based on screen width (for TV vs Mobile)
     val columns = if (LocalConfiguration.current.screenWidthDp > 900) 4 else 2
 
     val fetchData = {
@@ -58,7 +51,7 @@ fun MainScreen() {
                     RetrofitClient.pipedApi.search(searchQuery).items ?: emptyList()
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Search Failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "API Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
             isRefreshing = false
         }
@@ -73,38 +66,27 @@ fun MainScreen() {
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
-                    label = { Text("Search...") },
+                    label = { Text("Search") },
                     singleLine = true
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { fetchData() }) { Text("Search") }
+                Button(onClick = { fetchData() }) { Text("Go") }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = { fetchData() },
-                modifier = Modifier.fillMaxSize()
-            ) {
+            PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = { fetchData() }) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columns),
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(videos) { video ->
-                        VideoCard(video)
-                    }
+                    items(videos) { VideoCard(it) }
                 }
             }
-
-            // Central Loading Spinner
             if (isRefreshing && videos.isEmpty()) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
             }
         }
     }
@@ -116,47 +98,39 @@ fun VideoCard(video: PipedVideo) {
     val scope = rememberCoroutineScope()
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                // Ensure we have a clean 11-char ID
-                val cleanId = video.id.trim()
-                
-                if (cleanId.isBlank()) {
-                    Toast.makeText(context, "ID Error", Toast.LENGTH_SHORT).show()
-                    return@clickable
-                }
-                
-                scope.launch {
-                    try {
-                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
-                        val streamData = RetrofitClient.pipedApi.getStream(cleanId)
-                        
-                        /** * LIBRETUBE LOGIC:
-                         * 1. Priority: HLS (.m3u8) - Most stable for Android TV/ExoPlayer
-                         * 2. Fallback: First Video+Audio stream (Combined)
-                         */
-                        val videoUrl = streamData.hls ?: 
-                                      streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
-                        
-                        if (!videoUrl.isNullOrEmpty()) {
-                            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                                putExtra("video_url", videoUrl)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
-                        } else {
-                            Toast.makeText(context, "No stream found for this video", Toast.LENGTH_LONG).show()
-                        }
-                    } catch (e: Exception) {
-                        // Catch Error 500 here
-                        val msg = if (e.localizedMessage?.contains("500") == true) 
-                            "Error 500: Server is temporarily blocking requests" 
-                            else "Player Error: ${e.localizedMessage}"
-                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        modifier = Modifier.fillMaxWidth().clickable {
+            val videoId = video.id
+            if (videoId.isEmpty()) return@clickable
+            
+            scope.launch {
+                try {
+                    Toast.makeText(context, "Fetching Stream...", Toast.LENGTH_SHORT).show()
+                    val response = RetrofitClient.pipedApi.getStream(videoId)
+                    
+                    // Priority: HLS -> Combined Stream -> Video Only
+                    val streamUrl = response.hls ?: 
+                                    response.videoStreams?.firstOrNull { !it.videoOnly }?.url ?:
+                                    response.videoStreams?.firstOrNull()?.url
+
+                    if (!streamUrl.isNullOrEmpty()) {
+                        context.startActivity(Intent(context, VideoPlayerActivity::class.java).apply {
+                            putExtra("video_url", streamUrl)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    } else {
+                        Toast.makeText(context, "No stream found", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    // Logic to help debug 500
+                    val errorMsg = e.message ?: ""
+                    if (errorMsg.contains("500")) {
+                        Toast.makeText(context, "Server 500: Instance is failing to proxy this video", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
+        }
     ) {
         Column {
             AsyncImage(
@@ -165,12 +139,7 @@ fun VideoCard(video: PipedVideo) {
                 modifier = Modifier.aspectRatio(16f/9f),
                 contentScale = ContentScale.Crop
             )
-            Text(
-                text = video.title ?: "No Title",
-                modifier = Modifier.padding(8.dp),
-                maxLines = 2,
-                style = MaterialTheme.typography.bodySmall
-            )
+            Text(video.title ?: "", Modifier.padding(8.dp), maxLines = 2)
         }
     }
 }
