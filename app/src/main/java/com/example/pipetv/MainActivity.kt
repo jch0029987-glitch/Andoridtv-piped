@@ -56,7 +56,8 @@ fun MainScreen() {
                     if (searchQuery.isEmpty()) {
                         RetrofitClient.pipedApi.getTrending("US")
                     } else {
-                        RetrofitClient.pipedApi.search(searchQuery).items
+                        // Fix: Access .items for search results to avoid BEGIN_ARRAY error
+                        RetrofitClient.pipedApi.search(searchQuery).items ?: emptyList()
                     }
                 } else {
                     val invidiousResults = if (searchQuery.isEmpty()) {
@@ -75,7 +76,7 @@ fun MainScreen() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Fetch Failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -145,15 +146,19 @@ fun VideoCard(video: PipedVideo) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                if (video.id.isBlank()) {
+                // Safety check: ensure video ID is valid
+                if (video.id.isNullOrBlank()) {
                     Toast.makeText(context, "Invalid Video ID", Toast.LENGTH_SHORT).show()
                     return@clickable
                 }
+                
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Loading stream...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
                         val streamData = RetrofitClient.pipedApi.getStream(video.id)
-                        val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
+                        
+                        // Crash Prevention: Safe null check for stream list
+                        val url = streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
                         
                         if (!url.isNullOrEmpty()) {
                             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
@@ -162,10 +167,11 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "No stream found", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "No playable stream found", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Stream Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        // Handle network/API errors without crashing the app
+                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -178,7 +184,7 @@ fun VideoCard(video: PipedVideo) {
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = video.title,
+                text = video.title ?: "No Title",
                 modifier = Modifier.padding(8.dp),
                 maxLines = 2,
                 style = MaterialTheme.typography.bodySmall

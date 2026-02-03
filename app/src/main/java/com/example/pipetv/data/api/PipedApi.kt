@@ -17,14 +17,14 @@ interface PipedApi {
 }
 
 data class PipedSearchResponse(
-    val items: List<PipedVideo>
+    val items: List<PipedVideo>? = emptyList()
 )
 
 data class PipedStreamResponse(
-    val videoStreams: List<PipedStream>
+    val videoStreams: List<PipedStream>? = emptyList()
 )
 
 data class PipedStream(
-    val url: String,
-    val videoOnly: Boolean
+    val url: String? = null,
+    val videoOnly: Boolean = false
 )
