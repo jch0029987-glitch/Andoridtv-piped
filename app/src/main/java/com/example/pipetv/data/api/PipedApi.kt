@@ -1,6 +1,7 @@
 package com.example.pipetv.data.api
 
-import com.example.pipetv.data.model.*
+import com.example.pipetv.data.model.PipedVideo
+import com.example.pipetv.data.model.PipedStreamResponse
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -9,20 +10,15 @@ interface PipedApi {
     @GET("trending")
     suspend fun getTrending(@Query("region") region: String): List<PipedVideo>
 
+    // Search returns an object, so we use PipedSearchResponse
     @GET("search")
-    suspend fun search(
-        @Query("q") query: String,
-        @Query("filter") filter: String = "videos"
-    ): List<PipedVideo>
+    suspend fun search(@Query("q") query: String): PipedSearchResponse
 
-    @GET("streams/{videoId}")
-    suspend fun getStream(@Path("videoId") videoId: String): PipedStreamResponse
+    @GET("streams/{id}")
+    suspend fun getStream(@Path("id") id: String): PipedStreamResponse
 }
 
-interface InvidiousApi {
-    @GET("api/v1/trending")
-    suspend fun getTrending(): List<InvidiousVideo>
-
-    @GET("api/v1/search")
-    suspend fun search(@Query("q") query: String): List<InvidiousVideo>
-}
+// Wrapper to handle the "BEGIN_OBJECT" search result
+data class PipedSearchResponse(
+    val items: List<PipedVideo>
+)

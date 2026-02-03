@@ -46,23 +46,26 @@ fun MainScreen() {
     var isRefreshing by remember { mutableStateOf(false) }
     var selectedSource by remember { mutableIntStateOf(0) }
     
-    val isTv = LocalConfiguration.current.screenWidthDp > 900
-    val columns = if (isTv) 4 else 2
+    val columns = if (LocalConfiguration.current.screenWidthDp > 900) 4 else 2
 
     val fetchData = {
         scope.launch {
             isRefreshing = true
             try {
                 videos = if (selectedSource == 0) {
-                    if (searchQuery.isEmpty()) RetrofitClient.pipedApi.getTrending("US")
-                    else RetrofitClient.pipedApi.search(searchQuery)
+                    if (searchQuery.isEmpty()) {
+                        RetrofitClient.pipedApi.getTrending("US")
+                    } else {
+                        // Fix: Access .items from the search response object
+                        RetrofitClient.pipedApi.search(searchQuery).items
+                    }
                 } else {
                     val inv = if (searchQuery.isEmpty()) RetrofitClient.invidiousApi.getTrending()
                     else RetrofitClient.invidiousApi.search(searchQuery)
                     inv.map { PipedVideo(it.videoId, null, it.title, it.author, it.videoThumbnails[0].url) }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Network Error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Search Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -78,7 +81,7 @@ fun MainScreen() {
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Search...") },
+                        label = { Text("Search YouTube...") },
                         singleLine = true
                     )
                     Spacer(Modifier.width(8.dp))
@@ -118,7 +121,6 @@ fun VideoCard(video: PipedVideo) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Using Standard Material3 Card for maximum touch compatibility
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,10 +138,10 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "No stream URL found", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Stream not found", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Player Error", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
