@@ -40,13 +40,14 @@ fun MainScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var selectedSource by remember { mutableIntStateOf(0) }
+    var selectedSource by remember { mutableIntStateOf(0) } // 0: Piped, 1: Invidious
     
     val scope = rememberCoroutineScope()
-    val isTv = LocalConfiguration.current.screenWidthDp > 900
+    val config = LocalConfiguration.current
+    val isTv = config.screenWidthDp > 900 
     val columns = if (isTv) 4 else 2
 
-    val performFetch = {
+    val fetchData = {
         scope.launch {
             isRefreshing = true
             try {
@@ -63,7 +64,7 @@ fun MainScreen() {
         }
     }
 
-    LaunchedEffect(selectedSource) { performFetch() }
+    LaunchedEffect(selectedSource) { fetchData() }
 
     Scaffold(
         topBar = {
@@ -77,7 +78,7 @@ fun MainScreen() {
                         singleLine = true
                     )
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { performFetch() }) { Text("Go") }
+                    Button(onClick = { fetchData() }) { Text("Go") }
                 }
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -89,10 +90,9 @@ fun MainScreen() {
             }
         }
     ) { padding ->
-        // Pull-to-Refresh Wrapper
         PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { performFetch() },
+            onRefresh = { fetchData() },
             modifier = Modifier.padding(padding).fillMaxSize()
         ) {
             LazyVerticalGrid(
