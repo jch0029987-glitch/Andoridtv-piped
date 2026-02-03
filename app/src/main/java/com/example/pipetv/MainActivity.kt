@@ -2,15 +2,11 @@ package com.example.pipetv
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.Button
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,7 +14,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.* // TV specific components
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Surface as TvSurface
 import coil3.compose.AsyncImage
 import com.example.pipetv.data.api.RetrofitClient
 import com.example.pipetv.data.model.PipedVideo
@@ -27,76 +24,84 @@ import com.example.pipetv.ui.theme.PipeTVTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             PipeTVTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MainScreen()
-                }
+                MainScreen()
             }
         }
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isLoading by remember { mutableStateOf(false) }
+    var selectedSource by remember { mutableIntStateOf(0) } // 0: Piped, 1: Invidious
+    
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val config = LocalConfiguration.current
+    val isTv = config.screenWidthDp > 900 // Simple heuristic for TV/Tablet
+    val columns = if (isTv) 4 else 2
 
-    // Adaptive Grid: 2 columns for phones, 4 for TV/Tablets
-    val configuration = LocalConfiguration.current
-    val columns = if (configuration.screenWidthDp > 600) 4 else 2
-
-    // Initial Trending Load
-    LaunchedEffect(Unit) {
-        isLoading = true
-        try {
-            videos = RetrofitClient.pipedApi.getTrending("US")
-        } catch (e: Exception) {
-            e.printStackTrace()
+    // Logic to fetch videos
+    val performSearch = {
+        scope.launch {
+            isLoading = true
+            try {
+                videos = if (selectedSource == 0) {
+                    if (searchQuery.isEmpty()) RetrofitClient.pipedApi.getTrending("US")
+                    else RetrofitClient.pipedApi.search(searchQuery)
+                } else {
+                    val inv = if (searchQuery.isEmpty()) RetrofitClient.invidiousApi.getTrending()
+                    else RetrofitClient.invidiousApi.search(searchQuery)
+                    inv.map { PipedVideo(it.videoId, null, it.title, it.author, it.videoThumbnails[0].url) }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+            isLoading = false
         }
-        isLoading = false
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        // Search Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Search YouTube...") },
-                modifier = Modifier.weight(1f),
-                singleLine = true
-            )
-            Button(onClick = {
-                scope.launch {
-                    if (searchQuery.isNotEmpty()) {
-                        isLoading = true
-                        try {
-                            videos = RetrofitClient.pipedApi.search(searchQuery)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Search failed", Toast.LENGTH_SHORT).show()
-                        }
-                        isLoading = false
-                    }
+    LaunchedEffect(selectedSource) { performSearch() }
+
+    Scaffold(
+        topBar = {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Search...") },
+                        singleLine = true
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = { performSearch() }) { Text("Go") }
                 }
-            }) {
-                Text("Go")
+                
+                Spacer(Modifier.height(8.dp))
+
+                // Modern Compose Segmented Buttons
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = selectedSource == 0,
+                        onClick = { selectedSource = 0 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        label = { Text("Piped") }
+                    )
+                    SegmentedButton(
+                        selected = selectedSource == 1,
+                        onClick = { selectedSource = 1 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        label = { Text("Invidious") }
+                    )
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+    ) { padding ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -104,9 +109,9 @@ fun MainScreen() {
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(columns),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(padding).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(videos) { video ->
                     VideoCard(video)
@@ -122,30 +127,20 @@ fun VideoCard(video: PipedVideo) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // TV Card handles focus natively, but works with touch on Phone too
-    Card(
+    // Using TV Card for both because it handles D-Pad focus beautifully
+    // and works perfectly with touch.
+    androidx.tv.material3.Card(
         onClick = {
             scope.launch {
                 try {
-                    val videoId = video.id
-                    if (videoId.isNotEmpty()) {
-                        val streamData = RetrofitClient.pipedApi.getStream(videoId)
-                        
-                        // Pick HLS for better streaming, fallback to standard MP4
-                        val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
-                        
-                        if (url != null) {
-                            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                                putExtra("video_url", url)
-                            }
-                            context.startActivity(intent)
-                        } else {
-                            Toast.makeText(context, "No stream found", Toast.LENGTH_SHORT).show()
-                        }
+                    val streamData = RetrofitClient.pipedApi.getStream(video.id)
+                    val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
+                    if (url != null) {
+                        val intent = Intent(context, VideoPlayerActivity::class.java)
+                        intent.putExtra("video_url", url)
+                        context.startActivity(intent)
                     }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "API Error", Toast.LENGTH_SHORT).show()
-                }
+                } catch (e: Exception) { e.printStackTrace() }
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -154,16 +149,14 @@ fun VideoCard(video: PipedVideo) {
             AsyncImage(
                 model = video.thumbnail,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f),
+                modifier = Modifier.aspectRatio(16f/9f),
                 contentScale = ContentScale.Crop
             )
-            androidx.compose.material3.Text(
+            Text(
                 text = video.title,
-                maxLines = 2,
                 modifier = Modifier.padding(8.dp),
-                style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                maxLines = 2,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
