@@ -65,7 +65,6 @@ fun MainScreen() {
                         RetrofitClient.invidiousApi.search(searchQuery)
                     }
                     
-                    // Corrected mapping to use 'id' and 'uploader'
                     invidiousResults.map { inv ->
                         PipedVideo(
                             id = inv.videoId,
@@ -76,7 +75,7 @@ fun MainScreen() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Network Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -108,20 +107,30 @@ fun MainScreen() {
             }
         }
     ) { padding ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { fetchData() },
-            modifier = Modifier.padding(padding).fillMaxSize()
-        ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { fetchData() },
+                modifier = Modifier.fillMaxSize()
             ) {
-                items(videos) { video ->
-                    VideoCard(video)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(videos) { video ->
+                        VideoCard(video)
+                    }
                 }
+            }
+
+            // LOADING SPINNER
+            if (isRefreshing && videos.isEmpty()) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
@@ -136,13 +145,15 @@ fun VideoCard(video: PipedVideo) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
+                if (video.id.isBlank()) {
+                    Toast.makeText(context, "Invalid Video ID", Toast.LENGTH_SHORT).show()
+                    return@clickable
+                }
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
-                        
-                        // Using video.id and matching the PipedStreamResponse structure
+                        Toast.makeText(context, "Loading stream...", Toast.LENGTH_SHORT).show()
                         val streamData = RetrofitClient.pipedApi.getStream(video.id)
-                        val url = streamData.videoStreams.firstOrNull { stream -> !stream.videoOnly }?.url
+                        val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
                         
                         if (!url.isNullOrEmpty()) {
                             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
@@ -151,10 +162,10 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "No playable stream found", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "No stream found", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Stream Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
