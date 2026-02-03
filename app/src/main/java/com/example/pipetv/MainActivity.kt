@@ -75,7 +75,7 @@ fun MainScreen() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Fetch Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -91,7 +91,7 @@ fun MainScreen() {
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Search...") },
+                        label = { Text("Search YouTube...") },
                         singleLine = true
                     )
                     Spacer(Modifier.width(8.dp))
@@ -144,7 +144,7 @@ fun VideoCard(video: PipedVideo) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                // video.id now uses the logic that cleans /watch?v= URLs
+                // IMPORTANT: Use the 'id' getter which cleans the rawId
                 val cleanId = video.id
                 
                 if (cleanId.isBlank()) {
@@ -154,7 +154,9 @@ fun VideoCard(video: PipedVideo) {
                 
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Loading Stream...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
+                        
+                        // This request to /streams/{id} is what was failing with 500
                         val streamData = RetrofitClient.pipedApi.getStream(cleanId)
                         
                         val url = streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
@@ -166,10 +168,10 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "Stream not found", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Server did not provide a stream URL", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Player Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -182,7 +184,7 @@ fun VideoCard(video: PipedVideo) {
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = video.title ?: "No Title",
+                text = video.title ?: "Untitled",
                 modifier = Modifier.padding(8.dp),
                 maxLines = 2,
                 style = MaterialTheme.typography.bodySmall
