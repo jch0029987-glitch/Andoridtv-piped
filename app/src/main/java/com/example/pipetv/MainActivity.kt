@@ -2,7 +2,6 @@ package com.example.pipetv
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,10 +40,10 @@ fun MainScreen() {
         scope.launch {
             isLoading = true
             try {
+                // Trending works usually because it's a simple GET
                 videos = RetrofitClient.pipedApi.getTrending("US")
             } catch (e: Exception) {
-                Log.e("PIPED", "Fetch error", e)
-                Toast.makeText(context, "Server Error: 500", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
             isLoading = false
         }
@@ -75,26 +74,38 @@ fun VideoCard(video: PipedVideo) {
     val scope = rememberCoroutineScope()
 
     Card(Modifier.clickable {
+        // CLEANING THE ID: Crucial for avoiding 500
+        val cleanId = video.id.replace("/watch?v=", "").split("&")[0].trim()
+
         scope.launch {
             try {
-                val streamData = RetrofitClient.pipedApi.getStream(video.id)
-                // Browser-style priority: HLS first, then high quality video
+                Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
+                val streamData = RetrofitClient.pipedApi.getStream(cleanId)
+                
+                // Prioritize HLS manifest as browsers do
                 val url = streamData.hls ?: streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
                 
                 if (url != null) {
                     val intent = Intent(context, VideoPlayerActivity::class.java)
                     intent.putExtra("video_url", url)
                     context.startActivity(intent)
+                } else {
+                    Toast.makeText(context, "No stream URL found", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Log.e("PIPED", "Stream error", e)
-                Toast.makeText(context, "Stream Error 500", Toast.LENGTH_SHORT).show()
+                // If this still says 500, it's the User-Agent being rejected
+                Toast.makeText(context, "Stream 500: Server rejected request", Toast.LENGTH_LONG).show()
             }
         }
     }) {
         Column {
-            AsyncImage(model = video.thumbnail, contentDescription = null, Modifier.aspectRatio(16/9f), contentScale = ContentScale.Crop)
-            Text(video.title ?: "", Modifier.padding(8.dp), maxLines = 2)
+            AsyncImage(
+                model = video.thumbnail, 
+                contentDescription = null, 
+                modifier = Modifier.aspectRatio(16/9f), 
+                contentScale = ContentScale.Crop
+            )
+            Text(video.title ?: "Untitled", Modifier.padding(8.dp), maxLines = 2)
         }
     }
 }
