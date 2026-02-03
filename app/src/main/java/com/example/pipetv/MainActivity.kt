@@ -6,13 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.material3.OutlinedTextField // Import from standard Material3
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.* // Keep TV specific components for everything else
+import androidx.tv.material3.* // TV specific components
+import androidx.compose.material3.OutlinedTextField // Standard Mobile component
 import coil3.compose.AsyncImage
 import com.example.pipetv.data.api.RetrofitClient
 import com.example.pipetv.data.model.PipedVideo
@@ -41,7 +41,6 @@ fun MainScreen() {
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     val scope = rememberCoroutineScope()
 
-    // Default Load
     LaunchedEffect(Unit) {
         try {
             videos = RetrofitClient.pipedApi.getTrending("US")
@@ -49,15 +48,17 @@ fun MainScreen() {
     }
 
     Column(modifier = Modifier.padding(24.dp)) {
+        // Search Section
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = { newValue -> searchQuery = newValue },
                 label = { Text("Search Videos...") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                singleLine = true
             )
             Button(onClick = {
                 scope.launch {
@@ -74,6 +75,7 @@ fun MainScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -96,12 +98,10 @@ fun VideoCard(video: PipedVideo) {
         onClick = {
             scope.launch {
                 try {
-                    // Fix: Use the 'id' helper from our model and handle null
-                    val videoId = video.id 
+                    val videoId = video.id
                     if (videoId.isNotEmpty()) {
                         val streamData = RetrofitClient.pipedApi.getStream(videoId)
                         val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
-                        
                         if (url != null) {
                             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                                 putExtra("video_url", url)
