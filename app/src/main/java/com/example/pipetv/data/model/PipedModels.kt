@@ -1,42 +1,32 @@
 package com.example.pipetv.data.model
 
-import com.google.gson.annotations.SerializedName
-
-// Model for video items in Trending/Search results
+// Standard Video model for both Piped and Invidious
 data class PipedVideo(
+    val videoId: String? = null,
+    val url: String? = null,
     val title: String,
-    val url: String, // e.g., "/watch?v=dQw4w9WgXcQ"
-    val thumbnail: String,
     val uploaderName: String,
-    val uploaderAvatar: String?,
-    val views: Long,
-    val uploadedDate: String?
+    val thumbnail: String
 ) {
-    val videoId: String get() = url.split("=").last()
+    // This helper ensures we always have an ID, even if the API only sends a URL
+    val id: String get() = videoId ?: url?.split("v=")?.last() ?: ""
 }
 
-// Model for the stream response
 data class PipedStreamResponse(
-    val hls: String?,
-    @SerializedName("videoStreams") val videoStreams: List<VideoStream>?,
-    val audioStreams: List<AudioStream>?,
-    val title: String?,
-    val description: String?
+    val videoStreams: List<VideoStream>
 )
 
 data class VideoStream(
     val url: String,
-    val format: String,
     val quality: String,
     val videoOnly: Boolean
 )
 
-data class AudioStream(
-    val url: String,
-    val format: String,
-    val bitrate: Int
+data class InvidiousVideo(
+    val videoId: String,
+    val title: String,
+    val author: String,
+    val videoThumbnails: List<InvidiousThumb>
 )
 
-data class SearchResponse(
-    val items: List<PipedVideo>
-)
+data class InvidiousThumb(val url: String)
