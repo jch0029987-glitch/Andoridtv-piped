@@ -44,51 +44,45 @@ fun MainScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var selectedSource by remember { mutableIntStateOf(0) } // 0: Piped, 1: Invidious
+    var selectedSource by remember { mutableIntStateOf(0) }
     
-    val config = LocalConfiguration.current
-    val columns = if (config.screenWidthDp > 900) 4 else 2
+    val columns = if (LocalConfiguration.current.screenWidthDp > 900) 4 else 2
 
     val fetchData = {
         scope.launch {
             isRefreshing = true
             try {
                 videos = if (selectedSource == 0) {
-                    // --- Piped Logic ---
                     if (searchQuery.isEmpty()) {
                         RetrofitClient.pipedApi.getTrending("US")
                     } else {
                         RetrofitClient.pipedApi.search(searchQuery).items
                     }
                 } else {
-                    // --- Invidious Logic ---
                     val invidiousResults = if (searchQuery.isEmpty()) {
                         RetrofitClient.invidiousApi.getTrending()
                     } else {
                         RetrofitClient.invidiousApi.search(searchQuery)
                     }
                     
-                    // Map Invidious model to our unified PipedVideo UI model
+                    // FIXED: Using 'videoId' and 'uploaderName' to match your model
                     invidiousResults.map { inv ->
                         PipedVideo(
-                            id = inv.videoId,
+                            videoId = inv.videoId,
                             title = inv.title,
-                            uploader = inv.author,
+                            uploaderName = inv.author,
                             thumbnail = inv.videoThumbnails.firstOrNull()?.url ?: ""
                         )
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Network Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Search Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
     }
 
-    // Trigger fetch when source is toggled
-    LaunchedEffect(selectedSource) {
-        fetchData()
-    }
+    LaunchedEffect(selectedSource) { fetchData() }
 
     Scaffold(
         topBar = {
@@ -102,26 +96,14 @@ fun MainScreen() {
                         singleLine = true
                     )
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { fetchData() }) {
-                        Text("Go")
-                    }
+                    Button(onClick = { fetchData() }) { Text("Go") }
                 }
-                
                 Spacer(Modifier.height(8.dp))
-
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = selectedSource == 0,
-                        onClick = { selectedSource = 0 },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        label = { Text("Piped") }
-                    )
-                    SegmentedButton(
-                        selected = selectedSource == 1,
-                        onClick = { selectedSource = 1 },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        label = { Text("Invidious") }
-                    )
+                    SegmentedButton(selected = selectedSource == 0, onClick = { selectedSource = 0 },
+                        shape = SegmentedButtonDefaults.itemShape(0, 2), label = { Text("Piped") })
+                    SegmentedButton(selected = selectedSource == 1, onClick = { selectedSource = 1 },
+                        shape = SegmentedButtonDefaults.itemShape(1, 2), label = { Text("Invidious") })
                 }
             }
         }
@@ -156,8 +138,9 @@ fun VideoCard(video: PipedVideo) {
             .clickable {
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
-                        val streamData = RetrofitClient.pipedApi.getStream(video.id)
+                        Toast.makeText(context, "Loading...", Toast.LENGTH_SHORT).show()
+                        // FIXED: Using video.videoId instead of video.id
+                        val streamData = RetrofitClient.pipedApi.getStream(video.videoId)
                         val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
                         
                         if (!url.isNullOrEmpty()) {
@@ -167,10 +150,10 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "No stream URL available", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Stream not found", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
