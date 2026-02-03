@@ -6,12 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.material3.OutlinedTextField // Import from standard Material3
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.*
+import androidx.tv.material3.* // Keep TV specific components for everything else
 import coil3.compose.AsyncImage
 import com.example.pipetv.data.api.RetrofitClient
 import com.example.pipetv.data.model.PipedVideo
@@ -38,17 +39,20 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
-    var currentSource by remember { mutableStateOf("PIPED") }
     val scope = rememberCoroutineScope()
 
-    // Load Trending by default
+    // Default Load
     LaunchedEffect(Unit) {
-        videos = RetrofitClient.pipedApi.getTrending("US")
+        try {
+            videos = RetrofitClient.pipedApi.getTrending("US")
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     Column(modifier = Modifier.padding(24.dp)) {
-        // --- Search Bar Row ---
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -58,7 +62,9 @@ fun MainScreen() {
             Button(onClick = {
                 scope.launch {
                     if (searchQuery.isNotEmpty()) {
-                        videos = RetrofitClient.pipedApi.search(searchQuery)
+                        try {
+                            videos = RetrofitClient.pipedApi.search(searchQuery)
+                        } catch (e: Exception) { e.printStackTrace() }
                     }
                 }
             }) {
@@ -68,7 +74,6 @@ fun MainScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- Video Grid ---
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -91,16 +96,18 @@ fun VideoCard(video: PipedVideo) {
         onClick = {
             scope.launch {
                 try {
-                    // Get Stream from Piped
-                    val streamData = RetrofitClient.pipedApi.getStream(video.videoId)
-                    // Select first stream with audio
-                    val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
-                    
-                    if (url != null) {
-                        val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                            putExtra("video_url", url)
+                    // Fix: Use the 'id' helper from our model and handle null
+                    val videoId = video.id 
+                    if (videoId.isNotEmpty()) {
+                        val streamData = RetrofitClient.pipedApi.getStream(videoId)
+                        val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
+                        
+                        if (url != null) {
+                            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                                putExtra("video_url", url)
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
                     }
                 } catch (e: Exception) { e.printStackTrace() }
             }
@@ -111,10 +118,15 @@ fun VideoCard(video: PipedVideo) {
             AsyncImage(
                 model = video.thumbnail,
                 contentDescription = null,
-                modifier = Modifier.aspectRatio(16/9f),
+                modifier = Modifier.aspectRatio(16f / 9f),
                 contentScale = ContentScale.Crop
             )
-            Text(video.title, maxLines = 2, modifier = Modifier.padding(8.dp))
+            Text(
+                text = video.title,
+                maxLines = 2,
+                modifier = Modifier.padding(8.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
