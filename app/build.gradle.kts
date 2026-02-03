@@ -39,6 +39,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.10.0")
+    implementation("androidx.compose.foundation:foundation-layout:1.7.0")
+    implementation("androidx.compose.foundation:foundation:1.7.0")
 
     // Jetpack Compose for TV (2026 Stable)
     implementation("androidx.tv:tv-foundation:1.0.0-alpha12")
