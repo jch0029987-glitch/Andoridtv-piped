@@ -5,15 +5,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    // The correct API URL for private.coffee
     private const val PIPED_BASE_URL = "https://api.piped.private.coffee/"
-    private const val INVIDIOUS_BASE_URL = "https://inv.tux.rs/"
 
     private val client = OkHttpClient.Builder()
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
-                .header("User-Agent", "Mozilla/5.0 (Android 14; Mobile; rv:120.0) Gecko/120.0 Firefox/120.0")
-                .header("Referer", "https://piped.private.coffee/")
+                // Use a standard Desktop User-Agent. Servers trust this more than Mobile ones.
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0")
+                .header("Accept", "application/json")
                 .build()
             chain.proceed(request)
         }
@@ -26,14 +25,5 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(PipedApi::class.java)
-    }
-
-    val invidiousApi: InvidiousApi by lazy {
-        Retrofit.Builder()
-            .baseUrl(INVIDIOUS_BASE_URL)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(InvidiousApi::class.java)
     }
 }

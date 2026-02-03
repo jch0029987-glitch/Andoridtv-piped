@@ -44,7 +44,6 @@ fun MainScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var selectedSource by remember { mutableIntStateOf(0) }
     
     val columns = if (LocalConfiguration.current.screenWidthDp > 900) 4 else 2
 
@@ -52,27 +51,10 @@ fun MainScreen() {
         scope.launch {
             isRefreshing = true
             try {
-                videos = if (selectedSource == 0) {
-                    if (searchQuery.isEmpty()) {
-                        RetrofitClient.pipedApi.getTrending("US")
-                    } else {
-                        RetrofitClient.pipedApi.search(searchQuery).items ?: emptyList()
-                    }
+                videos = if (searchQuery.isEmpty()) {
+                    RetrofitClient.pipedApi.getTrending("US")
                 } else {
-                    val invidiousResults = if (searchQuery.isEmpty()) {
-                        RetrofitClient.invidiousApi.getTrending()
-                    } else {
-                        RetrofitClient.invidiousApi.search(searchQuery)
-                    }
-                    
-                    invidiousResults.map { inv ->
-                        PipedVideo(
-                            rawId = inv.videoId, 
-                            title = inv.title ?: "No Title",
-                            uploader = inv.author ?: "Unknown",
-                            thumbnail = inv.videoThumbnails?.firstOrNull()?.url ?: ""
-                        )
-                    }
+                    RetrofitClient.pipedApi.search(searchQuery).items ?: emptyList()
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Fetch Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
@@ -81,37 +63,27 @@ fun MainScreen() {
         }
     }
 
-    LaunchedEffect(selectedSource) { fetchData() }
+    LaunchedEffect(Unit) { fetchData() }
 
     Scaffold(
         topBar = {
-            Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("Search YouTube...") },
-                        singleLine = true
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = { fetchData() }) { Text("Go") }
-                }
-                Spacer(Modifier.height(8.dp))
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    SegmentedButton(selected = selectedSource == 0, onClick = { selectedSource = 0 },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2), label = { Text("Piped") })
-                    SegmentedButton(selected = selectedSource == 1, onClick = { selectedSource = 1 },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2), label = { Text("Invidious") })
-                }
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.weight(1f),
+                    label = { Text("Search YouTube") },
+                    singleLine = true
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { fetchData() }) { Text("Go") }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
-                onRefresh = { fetchData() },
-                modifier = Modifier.fillMaxSize()
+                onRefresh = { fetchData() }
             ) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columns),
@@ -126,10 +98,7 @@ fun MainScreen() {
             }
 
             if (isRefreshing && videos.isEmpty()) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
         }
     }
@@ -144,21 +113,20 @@ fun VideoCard(video: PipedVideo) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                // IMPORTANT: Use the 'id' getter which cleans the rawId
-                val cleanId = video.id
+                // Ensure ID is trimmed of any accidental whitespace
+                val cleanId = video.id.trim()
                 
-                if (cleanId.isBlank()) {
-                    Toast.makeText(context, "Invalid Video ID", Toast.LENGTH_SHORT).show()
+                if (cleanId.isEmpty()) {
+                    Toast.makeText(context, "ID Error", Toast.LENGTH_SHORT).show()
                     return@clickable
                 }
                 
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
-                        
-                        // This request to /streams/{id} is what was failing with 500
+                        Toast.makeText(context, "Opening Video...", Toast.LENGTH_SHORT).show()
                         val streamData = RetrofitClient.pipedApi.getStream(cleanId)
                         
+                        // Pick the first available stream that has audio
                         val url = streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
                         
                         if (!url.isNullOrEmpty()) {
@@ -168,10 +136,11 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "Server did not provide a stream URL", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "No stream URL from server", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Player Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        // This will now show the actual message if a 500 occurs
+                        Toast.makeText(context, "Server Error 500: Try a different video", Toast.LENGTH_LONG).show()
                     }
                 }
             }
