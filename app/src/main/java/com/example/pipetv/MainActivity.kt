@@ -2,6 +2,7 @@ package com.example.pipetv
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -37,14 +38,15 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    
     var searchQuery by remember { mutableStateOf("") }
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var selectedSource by remember { mutableIntStateOf(0) } // 0: Piped, 1: Invidious
+    var selectedSource by remember { mutableIntStateOf(0) }
     
-    val scope = rememberCoroutineScope()
-    val config = LocalConfiguration.current
-    val isTv = config.screenWidthDp > 900 
+    val isTv = LocalConfiguration.current.screenWidthDp > 900
     val columns = if (isTv) 4 else 2
 
     val fetchData = {
@@ -59,7 +61,9 @@ fun MainScreen() {
                     else RetrofitClient.invidiousApi.search(searchQuery)
                     inv.map { PipedVideo(it.videoId, null, it.title, it.author, it.videoThumbnails[0].url) }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Fetch Failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
             isRefreshing = false
         }
     }
@@ -119,15 +123,22 @@ fun VideoCard(video: PipedVideo) {
         onClick = {
             scope.launch {
                 try {
+                    Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
                     val streamData = RetrofitClient.pipedApi.getStream(video.id)
                     val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
-                    if (url != null) {
+                    
+                    if (!url.isNullOrEmpty()) {
                         val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                             putExtra("video_url", url)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                         context.startActivity(intent)
+                    } else {
+                        Toast.makeText(context, "No stream URL found", Toast.LENGTH_LONG).show()
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
             }
         },
         modifier = Modifier.fillMaxWidth()
