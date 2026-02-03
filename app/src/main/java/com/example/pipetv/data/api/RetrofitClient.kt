@@ -12,12 +12,15 @@ object RetrofitClient {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .addInterceptor { chain ->
-            val request = chain.request().newBuilder()
-                // These specific headers are what prevent Error 500
+            val original = chain.request()
+            val request = original.newBuilder()
+                // CRITICAL: These headers stop the 500 error
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .header("Accept", "application/json")
-                .header("Accept-Language", "en-US,en;q=0.5")
-                .header("Connection", "keep-alive")
+                .header("Accept", "*/*")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Referer", "https://piped.video/")
+                .header("Origin", "https://piped.video")
+                .method(original.method, original.body)
                 .build()
             chain.proceed(request)
         }
