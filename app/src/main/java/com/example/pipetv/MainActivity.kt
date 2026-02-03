@@ -4,12 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.* // Stable grid
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.* // TV Material for Cards
+import androidx.tv.material3.* // TV-specific Material3
 import coil3.compose.AsyncImage
 import com.example.pipetv.data.api.RetrofitClient
 import com.example.pipetv.data.model.PipedVideo
@@ -53,8 +53,7 @@ fun TrendingScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // In 2026, LazyVerticalGrid handles TV focus automatically 
-        // when using TV Material3 components inside it.
+        // Standardized grid for 2026
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -70,7 +69,7 @@ fun TrendingScreen() {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun VideoCard(video: PipedVideo) {
-    // StandardCard is the stable TV component for 2026
+    // TV-optimized Card from androidx.tv.material3
     Card(
         onClick = { /* TODO: Open Player */ },
         modifier = Modifier.width(200.dp)
@@ -90,7 +89,8 @@ fun VideoCard(video: PipedVideo) {
                 )
                 Text(
                     text = video.uploaderName,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
