@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material3.*
@@ -16,7 +17,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import coil3.compose.AsyncImage
 import com.example.pipetv.data.api.RetrofitClient
 import com.example.pipetv.data.model.PipedVideo
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val scope = rememberCoroutineScope()
@@ -62,7 +62,7 @@ fun MainScreen() {
                     inv.map { PipedVideo(it.videoId, null, it.title, it.author, it.videoThumbnails[0].url) }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Fetch Failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Network Error", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -113,41 +113,50 @@ fun MainScreen() {
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun VideoCard(video: PipedVideo) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    androidx.tv.material3.Card(
-        onClick = {
-            scope.launch {
-                try {
-                    Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
-                    val streamData = RetrofitClient.pipedApi.getStream(video.id)
-                    val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
-                    
-                    if (!url.isNullOrEmpty()) {
-                        val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                            putExtra("video_url", url)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    // Using Standard Material3 Card for maximum touch compatibility
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                scope.launch {
+                    try {
+                        Toast.makeText(context, "Loading Video...", Toast.LENGTH_SHORT).show()
+                        val streamData = RetrofitClient.pipedApi.getStream(video.id)
+                        val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
+                        
+                        if (!url.isNullOrEmpty()) {
+                            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                                putExtra("video_url", url)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        } else {
+                            Toast.makeText(context, "No stream URL found", Toast.LENGTH_LONG).show()
                         }
-                        context.startActivity(intent)
-                    } else {
-                        Toast.makeText(context, "No stream URL found", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                 }
             }
-        },
-        modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            AsyncImage(model = video.thumbnail, contentDescription = null,
-                modifier = Modifier.aspectRatio(16f/9f), contentScale = ContentScale.Crop)
-            Text(text = video.title, modifier = Modifier.padding(8.dp), maxLines = 2,
-                style = MaterialTheme.typography.bodySmall)
+            AsyncImage(
+                model = video.thumbnail,
+                contentDescription = null,
+                modifier = Modifier.aspectRatio(16f/9f),
+                contentScale = ContentScale.Crop
+            )
+            Text(
+                text = video.title,
+                modifier = Modifier.padding(8.dp),
+                maxLines = 2,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
