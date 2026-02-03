@@ -15,7 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 
 class VideoPlayerActivity : ComponentActivity() {
@@ -24,43 +26,36 @@ class VideoPlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Keep the screen on while playing video
+        // Prevent screen from dimming during video
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Get the stream URL passed from MainActivity
         val videoUrl = intent.getStringExtra("video_url") ?: ""
 
         setContent {
             val context = LocalContext.current
             
-            // Initialize ExoPlayer and remember its state across recompositions
             val exoPlayer = remember {
                 ExoPlayer.Builder(context).build().apply {
+                    // Build a data source with a browser-like User-Agent
+                    val dataSourceFactory = DefaultHttpDataSource.Factory()
+                        .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36")
+                    
                     val mediaItem = MediaItem.fromUri(videoUrl)
-                    setMediaItem(mediaItem)
+                    val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                        .createMediaSource(mediaItem)
+
+                    setMediaSource(mediaSource)
                     prepare()
-                    playWhenReady = true // Auto-play once ready
+                    playWhenReady = true
                 }
             }
 
-            // A dark container for the player
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                // Interop: Wrapping the classic Media3 PlayerView for TV controls
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
                             player = exoPlayer
-                            
-                            // TV-Specific UI Settings
                             useController = true
-                            setShowNextButton(false)
-                            setShowPreviousButton(false)
-                            
-                            // Ensure the player takes focus so the D-Pad works
                             requestFocus()
                         }
                     },
@@ -68,19 +63,11 @@ class VideoPlayerActivity : ComponentActivity() {
                 )
             }
 
-            // CRITICAL: Cleanup the player when the user leaves this screen
             DisposableEffect(Unit) {
                 onDispose {
-                    exoPlayer.stop()
                     exoPlayer.release()
                 }
             }
         }
-    }
-
-    // Pause playback if the user hits the Home button
-    override fun onPause() {
-        super.onPause()
-        // Simple global reference check if you need to pause manually
     }
 }
