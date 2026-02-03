@@ -56,7 +56,6 @@ fun MainScreen() {
                     if (searchQuery.isEmpty()) {
                         RetrofitClient.pipedApi.getTrending("US")
                     } else {
-                        // Unwraps the PipedSearchResponse object
                         RetrofitClient.pipedApi.search(searchQuery).items ?: emptyList()
                     }
                 } else {
@@ -66,10 +65,9 @@ fun MainScreen() {
                         RetrofitClient.invidiousApi.search(searchQuery)
                     }
                     
-                    // Maps Invidious fields to the PipedVideo model
                     invidiousResults.map { inv ->
                         PipedVideo(
-                            id = inv.videoId, 
+                            rawId = inv.videoId, 
                             title = inv.title ?: "No Title",
                             uploader = inv.author ?: "Unknown",
                             thumbnail = inv.videoThumbnails?.firstOrNull()?.url ?: ""
@@ -77,7 +75,7 @@ fun MainScreen() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Network Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -93,7 +91,7 @@ fun MainScreen() {
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Search YouTube...") },
+                        label = { Text("Search...") },
                         singleLine = true
                     )
                     Spacer(Modifier.width(8.dp))
@@ -127,7 +125,6 @@ fun MainScreen() {
                 }
             }
 
-            // Central Loading Spinner
             if (isRefreshing && videos.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
@@ -147,18 +144,19 @@ fun VideoCard(video: PipedVideo) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                // Robust check for the Video ID
-                if (video.id.isNullOrBlank()) {
-                    Toast.makeText(context, "Error: Invalid Video ID", Toast.LENGTH_SHORT).show()
+                // video.id now uses the logic that cleans /watch?v= URLs
+                val cleanId = video.id
+                
+                if (cleanId.isBlank()) {
+                    Toast.makeText(context, "Invalid Video ID", Toast.LENGTH_SHORT).show()
                     return@clickable
                 }
                 
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Fetching Stream...", Toast.LENGTH_SHORT).show()
-                        val streamData = RetrofitClient.pipedApi.getStream(video.id)
+                        Toast.makeText(context, "Loading Stream...", Toast.LENGTH_SHORT).show()
+                        val streamData = RetrofitClient.pipedApi.getStream(cleanId)
                         
-                        // Filters for non-video-only streams (includes audio)
                         val url = streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
                         
                         if (!url.isNullOrEmpty()) {
@@ -168,10 +166,10 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "Could not find a playable stream", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Stream not found", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -184,7 +182,7 @@ fun VideoCard(video: PipedVideo) {
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = video.title ?: "Untitled",
+                text = video.title ?: "No Title",
                 modifier = Modifier.padding(8.dp),
                 maxLines = 2,
                 style = MaterialTheme.typography.bodySmall
