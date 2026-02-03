@@ -1,8 +1,11 @@
 package com.example.pipetv.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class PipedVideo(
-    val id: String, // Ensure this is 'id'
-    val title: String,
-    val uploader: String, // Changed from uploaderName to uploader
-    val thumbnail: String
+    @SerializedName("id", alternate = ["videoId"])
+    val id: String,
+    val title: String?,
+    val uploader: String?,
+    val thumbnail: String?
 )
