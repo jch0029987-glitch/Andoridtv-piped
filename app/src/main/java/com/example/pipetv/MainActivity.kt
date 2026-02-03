@@ -65,18 +65,18 @@ fun MainScreen() {
                         RetrofitClient.invidiousApi.search(searchQuery)
                     }
                     
-                    // FIXED: Using 'videoId' and 'uploaderName' to match your model
+                    // Corrected mapping to use 'id' and 'uploader'
                     invidiousResults.map { inv ->
                         PipedVideo(
-                            videoId = inv.videoId,
+                            id = inv.videoId,
                             title = inv.title,
-                            uploaderName = inv.author,
+                            uploader = inv.author,
                             thumbnail = inv.videoThumbnails.firstOrNull()?.url ?: ""
                         )
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Search Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Network Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
             isRefreshing = false
         }
@@ -138,10 +138,11 @@ fun VideoCard(video: PipedVideo) {
             .clickable {
                 scope.launch {
                     try {
-                        Toast.makeText(context, "Loading...", Toast.LENGTH_SHORT).show()
-                        // FIXED: Using video.videoId instead of video.id
-                        val streamData = RetrofitClient.pipedApi.getStream(video.videoId)
-                        val url = streamData.videoStreams.firstOrNull { !it.videoOnly }?.url
+                        Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
+                        
+                        // Using video.id and matching the PipedStreamResponse structure
+                        val streamData = RetrofitClient.pipedApi.getStream(video.id)
+                        val url = streamData.videoStreams.firstOrNull { stream -> !stream.videoOnly }?.url
                         
                         if (!url.isNullOrEmpty()) {
                             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
@@ -150,7 +151,7 @@ fun VideoCard(video: PipedVideo) {
                             }
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "Stream not found", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "No playable stream found", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
                         Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
