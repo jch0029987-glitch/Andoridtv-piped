@@ -36,12 +36,13 @@ fun MainScreen() {
     var videos by remember { mutableStateOf(emptyList<InvidiousVideo>()) }
     var isLoading by remember { mutableStateOf(false) }
 
+    // Initial load
     LaunchedEffect(Unit) {
         isLoading = true
         try {
             videos = RetrofitClient.invidiousApi.getTrending()
         } catch (e: Exception) {
-            Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Connect Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
         isLoading = false
     }
@@ -55,40 +56,57 @@ fun MainScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(videos) { video ->
-                    VideoItem(video)
+                    VideoCard(video)
                 }
             }
-            if (isLoading) CircularProgressIndicator(Modifier.align(Alignment.Center))
+            if (isLoading) {
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
+            }
         }
     }
 }
 
 @Composable
-fun VideoItem(video: InvidiousVideo) {
+fun VideoCard(video: InvidiousVideo) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    Card(Modifier.clickable {
-        scope.launch {
-            try {
-                Toast.makeText(context, "Fetching Stream...", Toast.LENGTH_SHORT).show()
-                val data = RetrofitClient.invidiousApi.getVideoData(video.videoId)
-                
-                // Invidious formatStreams are direct playable URLs
-                val streamUrl = data.formatStreams?.firstOrNull()?.url
-                
-                if (!streamUrl.isNullOrEmpty()) {
-                    val intent = Intent(context, VideoPlayerActivity::class.java)
-                    intent.putExtra("video_url", streamUrl)
-                    context.startActivity(intent)
-                } else {
-                    Toast.makeText(context, "No stream found", Toast.LENGTH_SHORT).show()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                scope.launch {
+                    try {
+                        Toast.makeText(context, "Preparing Stream...", Toast.LENGTH_SHORT).show()
+                        val data = RetrofitClient.invidiousApi.getVideoData(video.videoId)
+                        
+                        // Yewtu.be 403 FIX: We must use a proxied URL or ensure it's absolute
+                        var streamUrl = data.formatStreams?.firstOrNull()?.url
+                        
+                        if (!streamUrl.isNullOrEmpty()) {
+                            // 1. Ensure absolute URL
+                            if (streamUrl.startsWith("/")) {
+                                streamUrl = "https://yewtu.be$streamUrl"
+                            }
+                            
+                            // 2. Force local proxying to bypass 403 IP lock
+                            if (!streamUrl.contains("local=true")) {
+                                streamUrl += if (streamUrl.contains("?")) "&local=true" else "?local=true"
+                            }
+
+                            context.startActivity(Intent(context, VideoPlayerActivity::class.java).apply {
+                                putExtra("video_url", streamUrl)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                        } else {
+                            Toast.makeText(context, "No stream found", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Stream Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
-        }
-    }) {
+    ) {
         Column {
             AsyncImage(
                 model = video.videoThumbnails?.firstOrNull()?.url,
@@ -96,7 +114,12 @@ fun VideoItem(video: InvidiousVideo) {
                 modifier = Modifier.aspectRatio(16/9f),
                 contentScale = ContentScale.Crop
             )
-            Text(video.title, Modifier.padding(8.dp), maxLines = 2, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = video.title,
+                modifier = Modifier.padding(8.dp),
+                maxLines = 2,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
