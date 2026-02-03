@@ -1,31 +1,16 @@
 package com.example.pipetv.data.api
 
-import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "https://api.piped.private.coffee/"
+    private const val BASE_URL = "https://yewtu.be/"
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            val request = chain.request().newBuilder()
-                // Mirroring a real browser request exactly
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
-                .header("Accept", "application/json")
-                .header("Referer", "https://piped.video/") 
-                .header("Origin", "https://piped.video")
-                .build()
-            chain.proceed(request)
-        }
-        .build()
-
-    val pipedApi: PipedApi by lazy {
+    val invidiousApi: InvidiousApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(PipedApi::class.java)
+            .create(InvidiousApi::class.java)
     }
 }

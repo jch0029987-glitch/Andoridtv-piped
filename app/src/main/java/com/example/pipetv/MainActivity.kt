@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.pipetv.data.api.RetrofitClient
-import com.example.pipetv.data.model.PipedVideo
+import com.example.pipetv.data.api.InvidiousVideo
 import com.example.pipetv.ui.player.VideoPlayerActivity
 import com.example.pipetv.ui.theme.PipeTVTheme
 import kotlinx.coroutines.launch
@@ -33,34 +33,29 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
+    var videos by remember { mutableStateOf(emptyList<InvidiousVideo>()) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val fetchData = {
-        scope.launch {
-            isLoading = true
-            try {
-                // Trending works usually because it's a simple GET
-                videos = RetrofitClient.pipedApi.getTrending("US")
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-            isLoading = false
+    LaunchedEffect(Unit) {
+        isLoading = true
+        try {
+            videos = RetrofitClient.invidiousApi.getTrending()
+        } catch (e: Exception) {
+            Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
+        isLoading = false
     }
-
-    LaunchedEffect(Unit) { fetchData() }
 
     Scaffold { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(videos) { video ->
-                    VideoCard(video)
+                    VideoItem(video)
                 }
             }
             if (isLoading) CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -69,43 +64,39 @@ fun MainScreen() {
 }
 
 @Composable
-fun VideoCard(video: PipedVideo) {
+fun VideoItem(video: InvidiousVideo) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     Card(Modifier.clickable {
-        // CLEANING THE ID: Crucial for avoiding 500
-        val cleanId = video.id.replace("/watch?v=", "").split("&")[0].trim()
-
         scope.launch {
             try {
-                Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
-                val streamData = RetrofitClient.pipedApi.getStream(cleanId)
+                Toast.makeText(context, "Fetching Stream...", Toast.LENGTH_SHORT).show()
+                val data = RetrofitClient.invidiousApi.getVideoData(video.videoId)
                 
-                // Prioritize HLS manifest as browsers do
-                val url = streamData.hls ?: streamData.videoStreams?.firstOrNull { !it.videoOnly }?.url
+                // Invidious formatStreams are direct playable URLs
+                val streamUrl = data.formatStreams?.firstOrNull()?.url
                 
-                if (url != null) {
+                if (!streamUrl.isNullOrEmpty()) {
                     val intent = Intent(context, VideoPlayerActivity::class.java)
-                    intent.putExtra("video_url", url)
+                    intent.putExtra("video_url", streamUrl)
                     context.startActivity(intent)
                 } else {
-                    Toast.makeText(context, "No stream URL found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "No stream found", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                // If this still says 500, it's the User-Agent being rejected
-                Toast.makeText(context, "Stream 500: Server rejected request", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Stream Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         }
     }) {
         Column {
             AsyncImage(
-                model = video.thumbnail, 
-                contentDescription = null, 
-                modifier = Modifier.aspectRatio(16/9f), 
+                model = video.videoThumbnails?.firstOrNull()?.url,
+                contentDescription = null,
+                modifier = Modifier.aspectRatio(16/9f),
                 contentScale = ContentScale.Crop
             )
-            Text(video.title ?: "Untitled", Modifier.padding(8.dp), maxLines = 2)
+            Text(video.title, Modifier.padding(8.dp), maxLines = 2, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
