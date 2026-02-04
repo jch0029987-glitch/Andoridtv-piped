@@ -40,11 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initNewPipe("US")
-        setContent {
-            PipeTVTheme {
-                MainScreen { newRegion -> initNewPipe(newRegion) }
-            }
-        }
+        setContent { PipeTVTheme { MainScreen { initNewPipe(it) } } }
     }
 
     private fun initNewPipe(countryCode: String) {
@@ -55,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 ContentCountry(countryCode)
             )
         } catch (e: Exception) {
-            Log.e("PipeTV", "NewPipe Init Failed", e)
+            Log.e("PipeTV", "Init Failed", e)
         }
     }
 }
@@ -75,21 +71,21 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
             errorMessage = null
             try {
                 val service = ServiceList.YouTube
-                // Use defaultKioskId to ensure we get the correct "Trending" feed
-                val kioskId = service.kioskList.defaultKioskId
+                // Try "Music" as the primary kiosk since the general "Trending" is deprecated
+                val kioskId = "Music" 
                 val extractor = service.kioskList.getExtractorById(kioskId, null)
                 extractor.fetchPage()
                 val items = extractor.initialPage.items.filterIsInstance<StreamInfoItem>()
                 
                 withContext(Dispatchers.Main) {
                     videos = items
-                    if (items.isEmpty()) errorMessage = "No videos found for $currentRegion"
                     isLoading = false
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    errorMessage = "Error: ${e.localizedMessage}"
+                    errorMessage = "Trending unavailable. Try switching region or refreshing."
                     isLoading = false
+                    Log.e("PipeTV", "Fetch Error", e)
                 }
             }
         }
@@ -103,10 +99,10 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("PipeTV Trending ($currentRegion)") },
+                title = { Text("PipeTV Music Trending") },
                 actions = {
                     TextButton(onClick = { currentRegion = if (currentRegion == "US") "GB" else "US" }) {
-                        Text("Switch Region")
+                        Text(currentRegion)
                     }
                     IconButton(onClick = { fetchVideos() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -115,13 +111,13 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
             )
         }
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize().background(Color(0xFF121212))) {
+        Box(Modifier.padding(padding).fillMaxSize().background(Color.Black)) {
             if (isLoading) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else if (errorMessage != null) {
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(errorMessage!!, color = Color.White, modifier = Modifier.padding(16.dp))
-                    Button(onClick = { fetchVideos() }) { Text("Retry") }
+                    Text(errorMessage!!, color = Color.White)
+                    Button(onClick = { fetchVideos() }, Modifier.padding(top = 16.dp)) { Text("Retry") }
                 }
             } else {
                 LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(8.dp)) {
@@ -148,13 +144,9 @@ fun VideoItem(video: StreamInfoItem) {
                             context.startActivity(Intent(context, VideoPlayerActivity::class.java).apply {
                                 putExtra("video_url", streamUrl)
                             })
-                        } else {
-                            Toast.makeText(context, "Stream not found", Toast.LENGTH_SHORT).show()
                         }
                     }
-                } catch (e: Exception) {
-                    Log.e("PipeTV", "Player Error", e)
-                }
+                } catch (e: Exception) { Log.e("PipeTV", "Play Error", e) }
             }
         },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
@@ -167,8 +159,8 @@ fun VideoItem(video: StreamInfoItem) {
                 contentScale = ContentScale.Crop
             )
             Column(Modifier.padding(8.dp)) {
-                Text(video.name ?: "Untitled", color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(video.uploaderName ?: "Unknown", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                Text(video.name ?: "", color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(video.uploaderName ?: "", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
             }
         }
     }

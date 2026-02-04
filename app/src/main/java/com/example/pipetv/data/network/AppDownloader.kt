@@ -15,21 +15,15 @@ class AppDownloader : Downloader() {
         val method = request.httpMethod()
         val url = request.url()
 
-        // Fix: POST/PUT requests must have a body in OkHttp.
-        // We pass an empty body if none is provided to satisfy the library.
         val body = if (method == "POST" || method == "PUT") {
             RequestBody.create("application/json".toMediaTypeOrNull(), ByteArray(0))
-        } else {
-            null
-        }
+        } else null
 
         val headersBuilder = Headers.Builder()
         request.headers()?.forEach { (key, values) ->
             values.forEach { value -> headersBuilder.add(key, value) }
         }
-
-        // Add a modern User-Agent to prevent YouTube from blocking the "Trending" scraper
-        headersBuilder.set("User-Agent", "Mozilla/5.0 (Android 16; Mobile; rv:135.0) Gecko/135.0 Firefox/135.0")
+        headersBuilder.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
 
         val okRequest = okhttp3.Request.Builder()
             .url(url)
@@ -38,14 +32,6 @@ class AppDownloader : Downloader() {
             .build()
         
         val response = client.newCall(okRequest).execute()
-        val responseBody = response.body?.string()
-        
-        return Response(
-            response.code, 
-            response.message, 
-            response.headers.toMultimap(), 
-            responseBody, 
-            response.request.url.toString()
-        )
+        return Response(response.code, response.message, response.headers.toMultimap(), response.body?.string(), response.request.url.toString())
     }
 }
