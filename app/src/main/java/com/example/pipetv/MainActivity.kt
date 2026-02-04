@@ -62,7 +62,6 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     var videos by remember { mutableStateOf(emptyList<StreamInfoItem>()) }
     var isLoading by remember { mutableStateOf(true) }
-    var currentRegion by remember { mutableStateOf("US") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val fetchVideos = {
@@ -71,44 +70,34 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
             errorMessage = null
             try {
                 val service = ServiceList.YouTube
-                // Try "Music" as the primary kiosk since the general "Trending" is deprecated
-                val kioskId = "Music" 
-                val extractor = service.kioskList.getExtractorById(kioskId, null)
-                extractor.fetchPage()
-                val items = extractor.initialPage.items.filterIsInstance<StreamInfoItem>()
+                // Using Search instead of Kiosk because Kiosks are broken in v0.24.4
+                val search = service.searchExtractor("trending music")
+                search.fetchPage()
+                val items = search.initialPage.items.filterIsInstance<StreamInfoItem>()
                 
                 withContext(Dispatchers.Main) {
                     videos = items
                     isLoading = false
+                    if (items.isEmpty()) errorMessage = "No content found."
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    errorMessage = "Trending unavailable. Try switching region or refreshing."
+                    errorMessage = "Network Error: Please try again."
                     isLoading = false
-                    Log.e("PipeTV", "Fetch Error", e)
                 }
             }
         }
     }
 
-    LaunchedEffect(currentRegion) {
-        onRegionChange(currentRegion)
-        fetchVideos()
-    }
+    LaunchedEffect(Unit) { fetchVideos() }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("PipeTV Music Trending") },
-                actions = {
-                    TextButton(onClick = { currentRegion = if (currentRegion == "US") "GB" else "US" }) {
-                        Text(currentRegion)
-                    }
-                    IconButton(onClick = { fetchVideos() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
+            TopAppBar(title = { Text("PipeTV Home") }, actions = {
+                IconButton(onClick = { fetchVideos() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                 }
-            )
+            })
         }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize().background(Color.Black)) {
