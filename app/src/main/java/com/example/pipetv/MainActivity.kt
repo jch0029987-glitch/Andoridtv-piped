@@ -70,8 +70,8 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
             errorMessage = null
             try {
                 val service = ServiceList.YouTube
-                // Using Search instead of Kiosk because Kiosks are broken in v0.24.4
-                val search = service.searchExtractor("trending music")
+                // Corrected for v0.24.4: use getSearchExtractor
+                val search = service.getSearchExtractor("trending music")
                 search.fetchPage()
                 val items = search.initialPage.items.filterIsInstance<StreamInfoItem>()
                 

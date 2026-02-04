@@ -24,7 +24,7 @@ class AppDownloader : Downloader() {
             values.forEach { value -> headersBuilder.add(key, value) }
         }
         
-        // 2026 Modern User-Agent bypass
+        // 2026 Modern User-Agent bypass to mimic Chrome
         headersBuilder.set("User-Agent", "Mozilla/5.0 (Windows NT 10.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
 
         val okRequest = okhttp3.Request.Builder()
