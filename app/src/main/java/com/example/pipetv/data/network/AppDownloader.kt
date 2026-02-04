@@ -11,7 +11,6 @@ class AppDownloader : Downloader() {
 
     override fun execute(request: Request): Response {
         val headersBuilder = Headers.Builder()
-        // Manually build headers to avoid Map to Headers mismatch
         request.headers().forEach { (key, values) ->
             values.forEach { value -> headersBuilder.add(key, value) }
         }

@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
+            // Initialize with our custom downloader
             NewPipe.init(AppDownloader())
         } catch (e: Exception) {
             Log.e("PipeTV", "Init Error", e)
@@ -51,13 +52,14 @@ fun MainScreen() {
             try {
                 videos = withContext(Dispatchers.IO) {
                     val service = ServiceList.YouTube
-                    // v0.24.4 uses getKiosk
-                    val kiosk = service.kioskList.getKiosk("Trending")
+                    // In v0.24.4, use getKioskExtractor with the ID and a null URL
+                    val kiosk = service.getKioskExtractor("Trending", null)
                     kiosk.fetchPage()
-                    kiosk.itemsPage.items as List<StreamInfoItem>
+                    // Filter and map to StreamInfoItems
+                    kiosk.initialPage.items.filterIsInstance<StreamInfoItem>()
                 }
             } catch (e: Exception) {
-                Log.e("PipeTV", "Fetch Error", e)
+                Log.e("PipeTV", "Fetch Error: ${e.message}")
             }
             isLoading = false
         }
@@ -84,33 +86,36 @@ fun VideoItem(video: StreamInfoItem) {
     Card(Modifier.padding(8.dp).clickable {
         scope.launch(Dispatchers.IO) {
             try {
-                // v0.24.4 static call for StreamInfo
-                val info = StreamInfo.getInfo(ServiceList.YouTube, video.getUrl())
-                val streamUrl = info.videoStreams.firstOrNull()?.getUrl() ?: info.hlsUrl
+                // v0.24.4: Fetch info using the service and video URL
+                val info = StreamInfo.getInfo(ServiceList.YouTube, video.url)
+                // Get the best video-only stream or fallback to a combined stream
+                val streamUrl = info.videoStreams?.firstOrNull()?.url ?: info.hlsUrl
                 
                 withContext(Dispatchers.Main) {
                     if (streamUrl != null) {
-                        context.startActivity(Intent(context, VideoPlayerActivity::class.java).apply {
+                        val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                             putExtra("video_url", streamUrl)
-                        })
+                        }
+                        context.startActivity(intent)
                     } else {
-                        Toast.makeText(context, "No stream found", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "No streamable URL found", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
-                Log.e("PipeTV", "Click Error", e)
+                Log.e("PipeTV", "Player Error: ${e.message}")
             }
         }
     }) {
         Column {
             AsyncImage(
-                model = video.thumbnails.firstOrNull()?.url,
+                // Use the highest resolution thumbnail available
+                model = video.thumbnails?.firstOrNull()?.url,
                 contentDescription = null,
                 modifier = Modifier.aspectRatio(16/9f),
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = video.getName() ?: "Unknown",
+                text = video.name ?: "No Title",
                 modifier = Modifier.padding(8.dp),
                 maxLines = 2
             )
