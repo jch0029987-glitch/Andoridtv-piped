@@ -6,8 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -28,31 +27,25 @@ class VideoPlayerActivity : ComponentActivity() {
 
         setContent {
             val context = LocalContext.current
-
-            // Initialize ExoPlayer with browser headers to avoid 403
             val exoPlayer = remember {
+                // Fix 3: Browser Headers in ExoPlayer
                 val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0 Safari/537.36")
                     .setAllowCrossProtocolRedirects(true)
 
                 ExoPlayer.Builder(context)
                     .setMediaSourceFactory(DefaultMediaSourceFactory(httpDataSourceFactory))
                     .build().apply {
-                        val mediaItem = MediaItem.fromUri(videoUrl)
-                        setMediaItem(mediaItem)
+                        setMediaItem(MediaItem.fromUri(videoUrl))
                         prepare()
                         playWhenReady = true
                     }
             }
 
-            // Manage lifecycle
             DisposableEffect(Unit) {
-                onDispose {
-                    exoPlayer.release()
-                }
+                onDispose { exoPlayer.release() }
             }
 
-            // View hosting
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
@@ -60,9 +53,7 @@ class VideoPlayerActivity : ComponentActivity() {
                         useController = true
                     }
                 },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
+                modifier = Modifier.fillMaxSize().background(Color.Black)
             )
         }
     }

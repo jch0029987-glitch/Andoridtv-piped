@@ -41,7 +41,7 @@ fun MainScreen() {
         try {
             videos = RetrofitClient.invidiousApi.getTrending()
         } catch (e: Exception) {
-            Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Fetch Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
         isLoading = false
     }
@@ -55,7 +55,7 @@ fun MainScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(videos) { video ->
-                    VideoItem(video)
+                    VideoCard(video)
                 }
             }
             if (isLoading) CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -64,24 +64,26 @@ fun MainScreen() {
 }
 
 @Composable
-fun VideoItem(video: InvidiousVideo) {
+fun VideoCard(video: InvidiousVideo) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     Card(Modifier.clickable {
         scope.launch {
             try {
-                Toast.makeText(context, "Opening Stream...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Resolving Stream...", Toast.LENGTH_SHORT).show()
                 val data = RetrofitClient.invidiousApi.getVideoData(video.videoId)
                 
+                // Get the first available MP4 stream
                 var streamUrl = data.formatStreams?.firstOrNull()?.url
                 
                 if (!streamUrl.isNullOrEmpty()) {
-                    // Prepend domain if relative
+                    // Fix 1: Ensure absolute URL
                     if (streamUrl.startsWith("/")) {
                         streamUrl = "https://yewtu.be$streamUrl"
                     }
-                    // Force local proxying to avoid 403 IP lock
+                    
+                    // Fix 2: Force 'local=true' to bypass 403 Forbidden IP lock
                     if (!streamUrl.contains("local=true")) {
                         streamUrl += if (streamUrl.contains("?")) "&local=true" else "?local=true"
                     }
@@ -92,7 +94,7 @@ fun VideoItem(video: InvidiousVideo) {
                     context.startActivity(intent)
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Stream Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "API Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         }
     }) {
