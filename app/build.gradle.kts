@@ -60,12 +60,14 @@ implementation("com.google.android.material:material:1.12.0")
     // Video Playback (Media3)
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
-implementation("com.github.TeamNewPipe:NewPipeExtractor:0.25.1")
-implementation("com.squareup.okhttp3:okhttp:4.12.0") 
-implementation("com.github.teamnewpipe.newpipeextractor:timeago-parser:v0.25.1")
-    implementation("org.jsoup:jsoup:1.17.2")
-    implementation("com.google.code.gson:gson:2.10.1")
-
+   
 
 implementation("org.mozilla:rhino:1.8.0")
+implementation("com.github.teamnewpipe.newpipeextractor:extractor:v0.24.4")
+    implementation("com.github.teamnewpipe.newpipeextractor:timeago-parser:v0.24.4")
+
+implementation("org.jsoup:jsoup:1.18.1")
+    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("org.mozilla:rhino:1.8.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
