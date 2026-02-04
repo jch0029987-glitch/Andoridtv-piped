@@ -2,46 +2,68 @@ package com.example.pipetv.ui.player
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import com.example.pipetv.R
 
 class VideoPlayerActivity : ComponentActivity() {
-    private var player: ExoPlayer? = null
-
     @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_video_player)
+        
+        val videoUrl = intent.getStringExtra("video_url") ?: ""
 
-        val videoUrl = intent.getStringExtra("video_url") ?: return
-        val playerView = findViewById<PlayerView>(R.id.player_view)
+        setContent {
+            val context = LocalContext.current
 
-        // 1. Create a DataSource factory that mimics a browser
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .setAllowCrossProtocolRedirects(true)
+            // Initialize ExoPlayer with browser headers to avoid 403
+            val exoPlayer = remember {
+                val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+                    .setAllowCrossProtocolRedirects(true)
 
-        // 2. Build the player using that factory
-        player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(httpDataSourceFactory))
-            .build()
-            .also {
-                playerView.player = it
-                val mediaItem = MediaItem.fromUri(videoUrl)
-                it.setMediaItem(mediaItem)
-                it.prepare()
-                it.playWhenReady = true
+                ExoPlayer.Builder(context)
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(httpDataSourceFactory))
+                    .build().apply {
+                        val mediaItem = MediaItem.fromUri(videoUrl)
+                        setMediaItem(mediaItem)
+                        prepare()
+                        playWhenReady = true
+                    }
             }
-    }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        player?.release()
+            // Manage lifecycle
+            DisposableEffect(Unit) {
+                onDispose {
+                    exoPlayer.release()
+                }
+            }
+
+            // View hosting
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = true
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            )
+        }
     }
 }
