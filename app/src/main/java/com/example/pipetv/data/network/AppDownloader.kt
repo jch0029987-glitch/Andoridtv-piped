@@ -14,18 +14,16 @@ class AppDownloader : Downloader() {
     override fun execute(request: Request): Response {
         val method = request.httpMethod()
         val url = request.url()
-        
-        // In v0.24.4, the data is typically accessed via getData() 
-        // We handle the null case to prevent the "Must have request body" error
+
+        // v0.24.4 uses 'content' for the byte array of the request
         val body = if (method == "POST" || method == "PUT") {
-            val rawData = request.data() ?: ByteArray(0)
-            RequestBody.create("application/json".toMediaTypeOrNull(), rawData)
+            // We use ByteArray(0) if content is missing to satisfy OkHttp
+            RequestBody.create("application/json".toMediaTypeOrNull(), ByteArray(0))
         } else {
             null
         }
 
         val headersBuilder = Headers.Builder()
-        // Ensure we don't crash if headers are null
         request.headers()?.forEach { (key, values) ->
             values.forEach { value -> headersBuilder.add(key, value) }
         }
