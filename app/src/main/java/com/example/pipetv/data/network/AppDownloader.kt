@@ -24,8 +24,11 @@ class AppDownloader : Downloader() {
             values.forEach { value -> headersBuilder.add(key, value) }
         }
         
-        // 2026 Modern User-Agent bypass to mimic Chrome
-        headersBuilder.set("User-Agent", "Mozilla/5.0 (Windows NT 10.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+        // Mandatory 2026 API Headers to prevent "No Content"
+        headersBuilder.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+        headersBuilder.set("X-YouTube-Client-Name", "1")
+        headersBuilder.set("X-YouTube-Client-Version", "2.20260204.00.00")
+        headersBuilder.set("Origin", "https://www.youtube.com")
 
         val okRequest = okhttp3.Request.Builder()
             .url(url)
@@ -34,6 +37,14 @@ class AppDownloader : Downloader() {
             .build()
         
         val response = client.newCall(okRequest).execute()
-        return Response(response.code, response.message, response.headers.toMultimap(), response.body?.string(), response.request.url.toString())
+        val responseBody = response.body?.string()
+        
+        return Response(
+            response.code, 
+            response.message, 
+            response.headers.toMultimap(), 
+            responseBody, 
+            response.request.url.toString()
+        )
     }
 }
