@@ -5,7 +5,8 @@ import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
 import okhttp3.OkHttpClient
 import okhttp3.Headers
-import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
 class AppDownloader : Downloader() {
     private val client = OkHttpClient.Builder().build()
@@ -14,9 +15,12 @@ class AppDownloader : Downloader() {
         val method = request.httpMethod()
         val url = request.url()
         
-        // Fix: POST/PUT requests must have a body in OkHttp
+        // v0.24.4 uses dataRaw() for POST bodies
+        val bodyBytes = request.dataRaw()
+        
         val body = if (method == "POST" || method == "PUT") {
-            request.data()?.toRequestBody() ?: "".toRequestBody()
+            // If bodyBytes is null, we provide an empty byte array to satisfy OkHttp
+            RequestBody.create("application/json".toMediaTypeOrNull(), bodyBytes ?: ByteArray(0))
         } else {
             null
         }
