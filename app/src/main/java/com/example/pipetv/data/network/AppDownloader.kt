@@ -15,9 +15,9 @@ class AppDownloader : Downloader() {
         val method = request.httpMethod()
         val url = request.url()
 
-        // v0.24.4 uses 'content' for the byte array of the request
+        // Fix: POST/PUT requests must have a body in OkHttp.
+        // We pass an empty body if none is provided to satisfy the library.
         val body = if (method == "POST" || method == "PUT") {
-            // We use ByteArray(0) if content is missing to satisfy OkHttp
             RequestBody.create("application/json".toMediaTypeOrNull(), ByteArray(0))
         } else {
             null
@@ -27,6 +27,9 @@ class AppDownloader : Downloader() {
         request.headers()?.forEach { (key, values) ->
             values.forEach { value -> headersBuilder.add(key, value) }
         }
+
+        // Add a modern User-Agent to prevent YouTube from blocking the "Trending" scraper
+        headersBuilder.set("User-Agent", "Mozilla/5.0 (Android 16; Mobile; rv:135.0) Gecko/135.0 Firefox/135.0")
 
         val okRequest = okhttp3.Request.Builder()
             .url(url)

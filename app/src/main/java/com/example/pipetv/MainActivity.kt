@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,15 +39,10 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Initial setup for the extractor
         initNewPipe("US")
-        
         setContent {
             PipeTVTheme {
-                MainScreen { newRegion ->
-                    initNewPipe(newRegion)
-                }
+                MainScreen { newRegion -> initNewPipe(newRegion) }
             }
         }
     }
@@ -81,7 +75,9 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
             errorMessage = null
             try {
                 val service = ServiceList.YouTube
-                val extractor = service.kioskList.getExtractorById("Trending", null)
+                // Use defaultKioskId to ensure we get the correct "Trending" feed
+                val kioskId = service.kioskList.defaultKioskId
+                val extractor = service.kioskList.getExtractorById(kioskId, null)
                 extractor.fetchPage()
                 val items = extractor.initialPage.items.filterIsInstance<StreamInfoItem>()
                 
@@ -99,7 +95,6 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
         }
     }
 
-    // Load on start or when region changes
     LaunchedEffect(currentRegion) {
         onRegionChange(currentRegion)
         fetchVideos()
@@ -110,7 +105,6 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
             TopAppBar(
                 title = { Text("PipeTV Trending ($currentRegion)") },
                 actions = {
-                    // Quick region switcher (Setting)
                     TextButton(onClick = { currentRegion = if (currentRegion == "US") "GB" else "US" }) {
                         Text("Switch Region")
                     }
@@ -126,19 +120,12 @@ fun MainScreen(onRegionChange: (String) -> Unit) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else if (errorMessage != null) {
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(errorMessage!!, color = Color.White)
-                    Button(onClick = { fetchVideos() }, Modifier.padding(top = 8.dp)) {
-                        Text("Retry")
-                    }
+                    Text(errorMessage!!, color = Color.White, modifier = Modifier.padding(16.dp))
+                    Button(onClick = { fetchVideos() }) { Text("Retry") }
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(8.dp)
-                ) {
-                    items(videos) { video ->
-                        VideoItem(video)
-                    }
+                LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(8.dp)) {
+                    items(videos) { video -> VideoItem(video) }
                 }
             }
         }
@@ -151,30 +138,25 @@ fun VideoItem(video: StreamInfoItem) {
     val scope = rememberCoroutineScope()
 
     Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .clickable {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        val info = StreamInfo.getInfo(ServiceList.YouTube, video.url)
-                        // Get the highest quality video stream URL
-                        val streamUrl = info.videoStreams.firstOrNull()?.url ?: info.hlsUrl
-                        
-                        withContext(Dispatchers.Main) {
-                            if (streamUrl != null) {
-                                val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                                    putExtra("video_url", streamUrl)
-                                }
-                                context.startActivity(intent)
-                            } else {
-                                Toast.makeText(context, "Could not resolve stream URL", Toast.LENGTH_SHORT).show()
-                            }
+        modifier = Modifier.padding(8.dp).clickable {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val info = StreamInfo.getInfo(ServiceList.YouTube, video.url)
+                    val streamUrl = info.videoStreams.firstOrNull()?.url ?: info.hlsUrl
+                    withContext(Dispatchers.Main) {
+                        if (streamUrl != null) {
+                            context.startActivity(Intent(context, VideoPlayerActivity::class.java).apply {
+                                putExtra("video_url", streamUrl)
+                            })
+                        } else {
+                            Toast.makeText(context, "Stream not found", Toast.LENGTH_SHORT).show()
                         }
-                    } catch (e: Exception) {
-                        Log.e("PipeTV", "Playback Error", e)
                     }
+                } catch (e: Exception) {
+                    Log.e("PipeTV", "Player Error", e)
                 }
-            },
+            }
+        },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
     ) {
         Column {
@@ -185,18 +167,8 @@ fun VideoItem(video: StreamInfoItem) {
                 contentScale = ContentScale.Crop
             )
             Column(Modifier.padding(8.dp)) {
-                Text(
-                    text = video.name ?: "Untitled",
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = video.uploaderName ?: "Unknown Artist",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall
-                )
+                Text(video.name ?: "Untitled", color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(video.uploaderName ?: "Unknown", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
             }
         }
     }
