@@ -42,20 +42,21 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val scope = rememberCoroutineScope()
-    val downloader = remember { AppDownloader() }
+    val pipeDownloader = remember { AppDownloader() } // Explicit variable
 
     var videos by remember { mutableStateOf(emptyList<PipedVideo>()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("Music") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Search function
     val performSearch: (String) -> Unit = { query ->
         scope.launch {
             isLoading = true
             errorMessage = null
             try {
-                // Call AppDownloader.search() ONLY
-                val results: List<PipedVideo> = downloader.search(query)
+                // Explicit call on pipeDownloader
+                val results: List<PipedVideo> = pipeDownloader.search(query)
                 videos = results
                 isLoading = false
                 if (results.isEmpty()) {
