@@ -49,12 +49,12 @@ fun MainScreen() {
     var searchQuery by remember { mutableStateOf("Music") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Search function
     val performSearch: (String) -> Unit = { query ->
         scope.launch {
             isLoading = true
             errorMessage = null
             try {
+                // Call AppDownloader.search() ONLY
                 val results: List<PipedVideo> = downloader.search(query)
                 videos = results
                 isLoading = false
