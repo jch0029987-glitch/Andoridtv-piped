@@ -11,58 +11,77 @@ class AppDownloader {
 
     private val client = OkHttpClient()
     private val gson = Gson()
-    private val BASE_URL = "https://piped.kavin.rocks/api/v1/"
 
-    // Wrapper for Piped API search
-    data class PipedSearchResponse(
-        @SerializedName("items") val items: List<PipedItem> = emptyList()
+    // List of public Invidious instances to try
+    private val instances = listOf(
+        "https://yewtu.be",
+        "https://inv.nadeko.net",
+        "https://invidious.nerdvpn.de"
     )
 
-    data class PipedItem(
+    // API response wrapper
+    data class InvidiousSearchResponse(
+        @SerializedName("items") val items: List<InvidiousItem>? = emptyList()
+    )
+
+    data class InvidiousItem(
         val type: String?,
         val videoId: String?,
         val title: String?,
-        val uploader: String?,
-        @SerializedName("thumbnailUrl") val thumbnail: String?
+        val author: String?,
+        @SerializedName("videoThumbnails") val thumbnails: List<Thumbnail>?
+    )
+
+    data class Thumbnail(
+        val url: String?
     )
 
     /**
-     * Search Piped videos by query
+     * Search videos using Invidious instances
      */
     fun search(query: String): List<PipedVideo> {
-        return try {
-            val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val url = "${BASE_URL}search?q=$encodedQuery"
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
 
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .build()
+        for (instance in instances) {
+            try {
+                val url = "$instance/api/v1/search?q=$encodedQuery&type=video"
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
-            if (body.isNullOrEmpty()) return emptyList()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string() ?: continue
 
-            // Optional: log for debugging
-            println("AppDownloader search response: $body")
+                // If response contains error or CAPTCHA, try next instance
+                if (body.contains("error", ignoreCase = true) || body.contains("captcha", ignoreCase = true)) {
+                    continue
+                }
 
-            // Parse JSON into response wrapper
-            val searchResponse = gson.fromJson(body, PipedSearchResponse::class.java)
+                // Parse JSON
+                val searchResponse = gson.fromJson(body, InvidiousSearchResponse::class.java)
+                val items = searchResponse.items ?: continue
 
-            // Filter only videos and map to PipedVideo
-            searchResponse.items
-                .filter { it.type == "video" }
-                .map {
+                // Map to PipedVideo
+                val videos = items.filter { it.type == "video" }.map {
                     PipedVideo(
                         rawId = it.videoId,
                         title = it.title,
-                        uploader = it.uploader,
-                        thumbnail = it.thumbnail
+                        uploader = it.author,
+                        thumbnail = it.thumbnails?.firstOrNull()?.url
                     )
                 }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
+
+                if (videos.isNotEmpty()) return videos
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Try next instance
+                continue
+            }
         }
+
+        // No instance returned results
+        return emptyList()
     }
 }
