@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,15 +49,18 @@ fun MainScreen() {
     var searchQuery by remember { mutableStateOf("Music") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Search function
     val performSearch: (String) -> Unit = { query ->
         scope.launch {
             isLoading = true
             errorMessage = null
             try {
-                val results = downloader.search(query)
+                val results: List<PipedVideo> = downloader.search(query)
                 videos = results
                 isLoading = false
-                if (results.isEmpty()) errorMessage = "No results for '$query'"
+                if (results.isEmpty()) {
+                    errorMessage = "No results for '$query'"
+                }
             } catch (e: Exception) {
                 isLoading = false
                 errorMessage = "Error: ${e.localizedMessage}"
@@ -80,10 +85,7 @@ fun MainScreen() {
                     placeholder = { Text("Search Piped/Invidious...") },
                     trailingIcon = {
                         IconButton(onClick = { performSearch(searchQuery) }) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Search,
-                                contentDescription = "Search"
-                            )
+                            Icon(Icons.Default.Search, contentDescription = "Search")
                         }
                     },
                     singleLine = true
