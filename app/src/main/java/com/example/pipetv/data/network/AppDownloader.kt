@@ -1,10 +1,11 @@
 package com.example.pipetv.data.network
 
 import com.example.pipetv.data.model.PipedVideo
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import java.net.URLEncoder
 
 class AppDownloader {
 
@@ -12,19 +13,40 @@ class AppDownloader {
     private val gson = Gson()
     private val BASE_URL = "https://piped.kavin.rocks/api/v1/"
 
-    // THIS is the function MainActivity expects
+    // Piped API search response wrapper
+    data class PipedSearchResponse(
+        @SerializedName("items") val items: List<PipedVideo> = emptyList()
+    )
+
+    /**
+     * Search Piped videos by query
+     */
     fun search(query: String): List<PipedVideo> {
-        val url = "${BASE_URL}search?q=$query"
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "Mozilla/5.0")
-            .build()
+        try {
+            val encodedQuery = URLEncoder.encode(query, "UTF-8")
+            val url = "${BASE_URL}search?q=$encodedQuery"
 
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: return emptyList()
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
 
-        // Parse JSON into list of PipedVideo
-        val type = object : TypeToken<List<PipedVideo>>() {}.type
-        return gson.fromJson(body, type)
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+            if (body.isNullOrEmpty()) {
+                return emptyList()
+            }
+
+            // Optional: log the response for debugging
+            println("AppDownloader search response: $body")
+
+            // Parse JSON into PipedSearchResponse
+            val searchResponse = gson.fromJson(body, PipedSearchResponse::class.java)
+            return searchResponse.items
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return emptyList()
+        }
     }
 }
