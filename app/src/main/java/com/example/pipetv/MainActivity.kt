@@ -1,5 +1,5 @@
 package com.example.pipetv
-import com.example.pipetv.ui.MainScreen
+
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -78,7 +78,6 @@ fun MainScreen(repository: StreamRepository) {
         }
     }
 
-    // Initial search
     LaunchedEffect(Unit) { performSearch(searchQuery) }
 
     Scaffold(
