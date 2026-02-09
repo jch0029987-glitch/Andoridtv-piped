@@ -62,7 +62,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
-implementation("com.github.TeamNewPipe:timeago-parser:v0.24.4")
     // Required by extractor
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("com.google.code.gson:gson:2.11.0")
