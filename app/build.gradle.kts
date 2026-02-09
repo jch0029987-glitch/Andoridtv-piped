@@ -61,10 +61,8 @@ dependencies {
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // NewPipe Extractor (OFFICIAL)
-    implementation("org.schabi.newpipe:extractor:0.24.4")
-    implementation("org.schabi.newpipe:timeago-parser:0.24.4")
-
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
+implementation("com.github.TeamNewPipe:timeago-parser:v0.24.4")
     // Required by extractor
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("com.google.code.gson:gson:2.11.0")
