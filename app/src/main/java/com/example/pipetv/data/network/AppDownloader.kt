@@ -1,50 +1,56 @@
 package com.example.pipetv.data.network
 
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
-import okhttp3.OkHttpClient
-import okhttp3.RequestBody
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.Headers
+import java.net.CookieManager
+import java.util.concurrent.TimeUnit
 
 class AppDownloader : Downloader() {
 
-    private val client = OkHttpClient.Builder().build()
+    private val client = OkHttpClient.Builder()
+        .cookieJar(JavaNetCookieJar(CookieManager()))
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     override fun execute(request: Request): Response {
-        val method = request.httpMethod()
-        val url = request.url()
-        val body = if (method == "POST" || method == "PUT") {
-            RequestBody.create("application/json".toMediaTypeOrNull(), ByteArray(0))
-        } else null
-
-        val headersBuilder = Headers.Builder()
-        request.headers()?.forEach { (key, values) ->
-            values.forEach { value -> headersBuilder.add(key, value) }
+        val body = request.dataToSend()?.let {
+            RequestBody.create(
+                request.contentType()?.toMediaType(),
+                it
+            )
         }
 
-        // Required headers to prevent YouTube blocking
-        headersBuilder.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-        headersBuilder.set("X-YouTube-Client-Name", "1")
-        headersBuilder.set("X-YouTube-Client-Version", "2.20260204.00.00")
-        headersBuilder.set("Origin", "https://www.youtube.com")
+        val headers = Headers.Builder().apply {
+            request.headers()?.forEach { (key, values) ->
+                values.forEach { add(key, value) }
+            }
+
+            // Stable YouTube Android / TV fingerprint
+            set("User-Agent", "com.google.android.youtube.tv/1.0")
+            set("X-YouTube-Client-Name", "3")
+            set("X-YouTube-Client-Version", "17.31.35")
+            set("Origin", "https://www.youtube.com")
+        }.build()
 
         val okRequest = okhttp3.Request.Builder()
-            .url(url)
-            .method(method, body)
-            .headers(headersBuilder.build())
+            .url(request.url())
+            .method(request.httpMethod(), body)
+            .headers(headers)
             .build()
 
-        val response = client.newCall(okRequest).execute()
-        val responseBody = response.body?.string()
-
-        return Response(
-            response.code,
-            response.message,
-            response.headers.toMultimap(),
-            responseBody,
-            response.request.url.toString()
-        )
+        client.newCall(okRequest).execute().use { response ->
+            return Response(
+                response.code,
+                response.message,
+                response.headers.toMultimap(),
+                response.body?.string(),
+                response.request.url.toString()
+            )
+        }
     }
 }
