@@ -1,5 +1,6 @@
-package com.example.pipetv.network
+package com.example.pipetv.network  // Make sure this matches AppDownloader
 
+import com.example.pipetv.network.AppDownloader
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.localization.ContentCountry
@@ -12,22 +13,18 @@ class StreamRepository {
 
     init {
         try {
-            // Initialize NewPipeExtractor with AppDownloader
             NewPipe.init(
                 Downloader = AppDownloader(),
                 localization = Localization.fromLocale(Locale.ENGLISH),
                 contentCountry = ContentCountry("US")
             )
-        } catch (_: Exception) {
-            // Already initialized, ignore
-        }
+        } catch (_: Exception) { }
     }
 
     suspend fun searchVideos(query: String): List<StreamInfoItem> {
         val search = ServiceList.YouTube.getSearchExtractor(query)
         search.fetchPage()
-        // Fix: some NewPipe versions use .streams instead of .items
-        return search.initialPage.streams.filterIsInstance<StreamInfoItem>()
+        return search.initialPage.items.filterIsInstance<StreamInfoItem>() // Use 'items'
     }
 
     suspend fun getVideoInfo(url: String): StreamInfo {
