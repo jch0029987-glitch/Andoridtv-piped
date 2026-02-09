@@ -12,40 +12,25 @@ class StreamRepository {
 
     init {
         try {
-            // Initialize NewPipeExtractor once with custom AppDownloader
+            // Initialize NewPipeExtractor with AppDownloader
             NewPipe.init(
                 Downloader = AppDownloader(),
                 localization = Localization.fromLocale(Locale.ENGLISH),
                 contentCountry = ContentCountry("US")
             )
-        } catch (e: Exception) {
-            // Ignore if already initialized
+        } catch (_: Exception) {
+            // Already initialized, ignore
         }
     }
 
-    /**
-     * Search YouTube videos by query
-     */
     suspend fun searchVideos(query: String): List<StreamInfoItem> {
-        val searchExtractor = ServiceList.YouTube.getSearchExtractor(query)
-        searchExtractor.fetchPage()
-        return searchExtractor.initialPage.items.filterIsInstance<StreamInfoItem>()
+        val search = ServiceList.YouTube.getSearchExtractor(query)
+        search.fetchPage()
+        // Fix: some NewPipe versions use .streams instead of .items
+        return search.initialPage.streams.filterIsInstance<StreamInfoItem>()
     }
 
-    /**
-     * Get full video info, including streams
-     */
     suspend fun getVideoInfo(url: String): StreamInfo {
         return StreamInfo.getInfo(ServiceList.YouTube, url)
-    }
-
-    /**
-     * Optional: fetch playlist items
-     */
-    suspend fun getPlaylistItems(url: String): List<StreamInfoItem> {
-        val playlist = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getInfo(
-            ServiceList.YouTube, url
-        )
-        return playlist.items.filterIsInstance<StreamInfoItem>()
     }
 }
