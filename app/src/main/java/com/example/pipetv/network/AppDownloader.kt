@@ -1,4 +1,4 @@
-package com.example.pipetv.data.network
+package com.example.pipetv.network
 
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
