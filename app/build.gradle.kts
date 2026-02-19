@@ -45,25 +45,21 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:1.7.0")
     implementation("androidx.compose.foundation:foundation-layout:1.7.0")
 
-    // TV support (optional if targeting TV)
+    // TV support
     implementation("androidx.tv:tv-foundation:1.0.0-alpha12")
     implementation("androidx.tv:tv-material:1.0.0")
 
-    // Media3 ExoPlayer
+    // Media3 ExoPlayer + OkHttp Extension (Crucial for Stealth)
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.5.1") // <--- Added this
 
     // Image loader
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
 
-    // NewPipe Extractor (network layer)
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
-
-    // Networking helper (OkHttp)
+    // Networking & JSON (Required for Invidious)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:4.12.0")
-
-    // JS Parser (used by NewPipe)
-    implementation("org.mozilla:rhino:1.8.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 }
+
