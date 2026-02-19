@@ -16,7 +16,7 @@ class InvidiousRepository {
     private val TAG = "PipeTV_Repo"
 
     // GitHub Repo - Change YOUR_USER to your actual GitHub username
-    private val GITHUB_RELEASE_URL = "https://api.github.com/repos/YOUR_USER/Andoridtv-piped/releases/latest"
+    private val GITHUB_RELEASE_URL = "https://api.github.com/repos/jch0029987-glitch/Andoridtv-piped/releases/latest"
 
     suspend fun checkForUpdates(): Pair<String, String>? = withContext(Dispatchers.IO) {
         try {
