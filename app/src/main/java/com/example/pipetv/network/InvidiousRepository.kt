@@ -14,18 +14,14 @@ class InvidiousRepository {
 
     suspend fun searchVideos(query: String): List<InvidiousVideo> = withContext(Dispatchers.IO) {
         val url = "$baseUrl/api/v1/search?q=${query.replace(" ", "+")}"
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0")
-            .build()
-
+        val request = Request.Builder().url(url).build()
         try {
             val response = client.newCall(request).execute()
             val json = response.body?.string() ?: ""
             val type = object : TypeToken<List<InvidiousVideo>>() {}.type
             val videos: List<InvidiousVideo> = gson.fromJson(json, type) ?: emptyList()
 
-            // Rewrite thumbnails to local proxy for PdaNet stealth
+            // Proxy thumbnails through local server for PdaNet stealth
             videos.map { it.copy(thumbnailUrl = "$baseUrl/vi/${it.videoId}/maxresdefault.jpg") }
         } catch (e: Exception) {
             emptyList()
@@ -33,14 +29,12 @@ class InvidiousRepository {
     }
 
     suspend fun getVideoData(videoId: String): InvidiousVideoData? = withContext(Dispatchers.IO) {
-        // We force quality=dash and local=true to ensure the server tunnels the bits
+        // local=true is critical for tunneling video through your phone/server
         val url = "$baseUrl/api/v1/videos/$videoId?local=true&quality=dash"
         val request = Request.Builder().url(url).build()
-
         try {
             val response = client.newCall(request).execute()
-            val json = response.body?.string() ?: ""
-            gson.fromJson(json, InvidiousVideoData::class.java)
+            gson.fromJson(response.body?.string(), InvidiousVideoData::class.java)
         } catch (e: Exception) {
             null
         }
@@ -49,11 +43,19 @@ class InvidiousRepository {
     suspend fun getStreamUrl(videoId: String, preferredHeight: Int = 720): String? {
         val data = getVideoData(videoId) ?: return null
         
-        // Strategy: 1. Try preferred height MP4, 2. Try any MP4, 3. Take whatever is first
-        return data.formatStreams.firstOrNull { 
+        // Find the best MP4 stream
+        val rawUrl = data.formatStreams.firstOrNull { 
             it.qualityLabel.contains("${preferredHeight}p") && it.container == "mp4" 
         }?.url 
         ?: data.formatStreams.firstOrNull { it.container == "mp4" }?.url
         ?: data.formatStreams.firstOrNull()?.url
+
+        // FIX: Prepend baseUrl if Invidious returns a relative path
+        return when {
+            rawUrl == null -> null
+            rawUrl.startsWith("http") -> rawUrl
+            rawUrl.startsWith("/") -> "$baseUrl$rawUrl"
+            else -> "$baseUrl/$rawUrl"
+        }
     }
 }
