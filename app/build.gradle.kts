@@ -1,6 +1,10 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android") // Changed from org.jetbrains.kotlin.android to prevent the name clash
+    // Note: Do NOT add id("org.jetbrains.kotlin.android") here!
+    // AGP 9.0.0 has already registered the 'kotlin' extension.
+    
+    // However, you still need to apply the Compose Compiler plugin
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -29,7 +33,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // This is where the conflict usually occurs; ensure it's inside the 'android' block
+    // This block is safe now because the extension was created by AGP
     kotlinOptions {
         jvmTarget = "17"
     }
@@ -37,13 +41,10 @@ android {
     buildFeatures {
         compose = true
     }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
 }
 
 dependencies {
+    // ... keep your existing dependencies ...
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
@@ -53,7 +54,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     
-    // Coil 3
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
 
