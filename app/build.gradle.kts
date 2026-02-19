@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.pipetv"
-    compileSdk = 35 // Updated for 2026 standards
+    compileSdk = 36 // Updated for 2026 standards
 
     defaultConfig {
         applicationId = "com.example.pipetv"
