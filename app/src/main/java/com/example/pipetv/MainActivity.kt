@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -22,56 +23,65 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val navController = rememberNavController()
-            var selectedRoute by remember { mutableStateOf("home") }
+            MainApp()
+        }
+    }
+}
 
-            Row(Modifier.fillMaxSize().background(Color.Black)) {
-                // PERSISTENT SIDE PANEL
-                NavigationRail(
-                    containerColor = Color(0xFF1A1A1A),
-                    modifier = Modifier.width(100.dp)
-                ) {
-                    Spacer(Modifier.height(16.dp))
-                    
-                    NavigationRailItem(
-                        selected = selectedRoute == "home",
-                        onClick = { 
-                            selectedRoute = "home"
-                            navController.navigate("home") 
-                        },
-                        icon = { Icon(Icons.Default.Home, "Home") },
-                        label = { Text("Home") },
-                        colors = NavigationRailItemDefaults.colors(
-                            selectedIconColor = Color.Red,
-                            indicatorColor = Color.White.copy(0.1f)
-                        )
-                    )
+@Composable
+fun MainApp() {
+    val navController = rememberNavController()
+    var selectedRoute by remember { mutableStateOf("home") }
 
-                    NavigationRailItem(
-                        selected = selectedRoute == "search",
-                        onClick = { 
-                            selectedRoute = "search"
-                            navController.navigate("search") 
-                        },
-                        icon = { Icon(Icons.Default.Search, "Search") },
-                        label = { Text("Search") },
-                        colors = NavigationRailItemDefaults.colors(
-                            selectedIconColor = Color.Red,
-                            indicatorColor = Color.White.copy(0.1f)
-                        )
-                    )
-                }
+    Row(Modifier.fillMaxSize().background(Color.Black)) {
+        // SIDE PANEL
+        NavigationRail(
+            containerColor = Color(0xFF1A1A1A),
+            modifier = Modifier.width(100.dp)
+        ) {
+            Spacer(Modifier.height(16.dp))
+            
+            NavigationRailItem(
+                selected = selectedRoute == "home",
+                onClick = { 
+                    selectedRoute = "home"
+                    navController.navigate("home") 
+                },
+                icon = { Icon(Icons.Default.Home, "Home") },
+                label = { Text("Home") },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = Color.Red,
+                    unselectedIconColor = Color.Gray,
+                    indicatorColor = Color.White.copy(0.1f)
+                )
+            )
 
-                // DYNAMIC CONTENT
-                Box(Modifier.fillMaxSize()) {
-                    NavHost(navController = navController, startDestination = "home") {
-                        composable("home") { 
-                            Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                Text("Home Feed Coming Soon", color = Color.White)
-                            }
-                        }
-                        composable("search") { SearchScreen() }
+            NavigationRailItem(
+                selected = selectedRoute == "search",
+                onClick = { 
+                    selectedRoute = "search"
+                    navController.navigate("search") 
+                },
+                icon = { Icon(Icons.Default.Search, "Search") },
+                label = { Text("Search") },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = Color.Red,
+                    unselectedIconColor = Color.Gray,
+                    indicatorColor = Color.White.copy(0.1f)
+                )
+            )
+        }
+
+        // CONTENT AREA
+        Box(Modifier.fillMaxSize()) {
+            NavHost(navController = navController, startDestination = "home") {
+                composable("home") { 
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Home Feed", color = Color.White)
                     }
+                }
+                composable("search") { 
+                    SearchScreen() 
                 }
             }
         }

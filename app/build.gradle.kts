@@ -44,8 +44,8 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.compose.foundation:foundation:1.7.0")
     implementation("androidx.compose.foundation:foundation-layout:1.7.0")
-
-    // TV support
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+     // TV support
     implementation("androidx.tv:tv-foundation:1.0.0-alpha12")
     implementation("androidx.tv:tv-material:1.0.0")
 
