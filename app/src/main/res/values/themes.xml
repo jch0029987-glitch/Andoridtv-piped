@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="android:Theme.DeviceDefault.NoActionBar">
-        <!-- Android TV safe theme -->
+    <style name="Theme.PipeTV" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#FF0000</item>
     </style>
 </resources>

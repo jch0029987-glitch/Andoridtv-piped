@@ -12,7 +12,7 @@
         android:icon="@mipmap/ic_launcher"
         android:banner="@mipmap/ic_launcher"
         android:label="PipeTV"
-        android:theme="style/Theme.Material3.DayNight.NoActionBar"
+        android:theme="@style/Theme.PipeTV"
         android:usesCleartextTraffic="true">
 
         <activity
