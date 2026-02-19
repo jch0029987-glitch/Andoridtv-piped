@@ -19,6 +19,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.media3.common.*
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
@@ -27,35 +28,56 @@ import okhttp3.OkHttpClient
 @OptIn(UnstableApi::class)
 class VideoPlayerActivity : ComponentActivity() {
     private var player: ExoPlayer? = null
-    private var showQualityDialog = mutableStateOf(false)
+    private val showQualityDialog = mutableStateOf(false)
+
+    // Modern Chrome User-Agent to stay stealthy on PdaNet/Android 14
+    private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val videoUrl = intent.getStringExtra("video_url") ?: return
+        val videoUrl = intent.getStringExtra("video_url") ?: run {
+            Toast.makeText(this, "No URL found", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
-        // PdaNet Optimized Client
+        // Stealth Network Client: Essential for bypassing PdaNet carrier detection
         val stealthClient = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0")
+                    .header("User-Agent", userAgent)
                     .header("Referer", "http://10.78.240.3:3000/")
                     .build()
                 chain.proceed(request)
             }.build()
 
-        player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(OkHttpDataSource.Factory(stealthClient)))
+        // Android 14 requires a more robust RenderersFactory for local codecs
+        val renderersFactory = DefaultRenderersFactory(this).apply {
+            setEnableDecoderFallback(true)
+            setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        }
+
+        player = ExoPlayer.Builder(this, renderersFactory)
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(OkHttpDataSource.Factory(stealthClient))
+            )
             .build().apply {
-                setMediaItem(MediaItem.fromUri(videoUrl))
+                val mediaItem = MediaItem.Builder()
+                    .setUri(videoUrl)
+                    .setMimeType(MimeTypes.VIDEO_MP4) // Explicitly set for PdaNet stability
+                    .build()
+                
+                setMediaItem(mediaItem)
                 prepare()
                 playWhenReady = true
                 
-                // ERROR HANDLER: If playback fails, tell the user why
                 addListener(object : Player.Listener {
                     override fun onPlayerError(error: PlaybackException) {
-                        val reason = if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) 
-                            "403 Forbidden: Server proxy blocked." else "Error: ${error.errorCodeName}"
-                        Toast.makeText(this@VideoPlayerActivity, reason, Toast.LENGTH_LONG).show()
+                        // Detailed error logging to catch the "Runtime Check" failure
+                        val cause = error.cause?.message ?: "Unknown Connection Error"
+                        val errorMsg = "ExoPlayer Error: ${error.errorCodeName}\n$cause"
+                        Toast.makeText(this@VideoPlayerActivity, errorMsg, Toast.LENGTH_LONG).show()
+                        android.util.Log.e("PipeTV", errorMsg)
                     }
                 })
             }
@@ -67,6 +89,7 @@ class VideoPlayerActivity : ComponentActivity() {
                         PlayerView(context).apply {
                             this.player = this@VideoPlayerActivity.player
                             this.useController = true
+                            this.requestFocus()
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -76,7 +99,7 @@ class VideoPlayerActivity : ComponentActivity() {
                     QualityMenu(
                         onDismiss = { showQualityDialog.value = false },
                         onSelect = { height ->
-                            // Force ExoPlayer to switch resolutions
+                            // Dynamically force resolution selection
                             player?.trackSelectionParameters = player?.trackSelectionParameters
                                 ?.buildUpon()
                                 ?.setMaxVideoSize(1920, height)
@@ -100,8 +123,13 @@ class VideoPlayerActivity : ComponentActivity() {
                 true
             }
             KeyEvent.KEYCODE_BACK -> {
-                if (showQualityDialog.value) { showQualityDialog.value = false; true } 
-                else { finish(); true }
+                if (showQualityDialog.value) {
+                    showQualityDialog.value = false
+                    true
+                } else {
+                    finish()
+                    true
+                }
             }
             else -> super.onKeyDown(keyCode, event)
         }
@@ -110,6 +138,7 @@ class VideoPlayerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         player?.release()
+        player = null
     }
 }
 
@@ -117,21 +146,30 @@ class VideoPlayerActivity : ComponentActivity() {
 fun QualityMenu(onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
     val options = listOf("1080p" to 1080, "720p" to 720, "480p" to 480, "360p" to 360)
     Dialog(onDismissRequest = onDismiss) {
-        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))) {
-            Column(Modifier.padding(16.dp).width(200.dp)) {
-                Text("Select Quality", color = Color.Gray)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Column(Modifier.padding(16.dp).width(240.dp)) {
+                Text("Select Quality", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(8.dp))
                 options.forEach { (label, height) ->
                     var isFocused by remember { mutableStateOf(false) }
-                    Text(
-                        text = label,
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged { isFocused = it.isFocused }
                             .focusable()
-                            .clickable { onSelect(height) }
-                            .padding(12.dp),
-                        color = if (isFocused) Color.Red else Color.White
-                    )
+                            .clickable { onSelect(height) },
+                        color = if (isFocused) Color.White.copy(0.15f) else Color.Transparent,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = label,
+                            modifier = Modifier.padding(12.dp),
+                            color = if (isFocused) Color.Red else Color.White
+                        )
+                    }
                 }
             }
         }
