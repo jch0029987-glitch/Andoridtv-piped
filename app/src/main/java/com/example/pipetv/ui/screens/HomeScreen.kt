@@ -16,7 +16,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage // Corrected for Coil 3
 import com.example.pipetv.network.InvidiousRepository
 import com.example.pipetv.network.InvidiousVideo
 import com.example.pipetv.ui.player.VideoPlayerActivity
@@ -30,30 +30,20 @@ fun HomeScreen() {
     var trendingVideos by remember { mutableStateOf(emptyList<InvidiousVideo>()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Auto-fetch trending on start
     LaunchedEffect(Unit) {
         trendingVideos = repository.getTrendingVideos()
         isLoading = false
     }
 
-    Box(Modifier.fillMaxSize().padding(16.dp)) {
+    Box(Modifier.fillMaxSize().background(Color.Black).padding(16.dp)) {
         if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = Color.Red
-            )
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.Red)
         } else {
             Column {
-                Text(
-                    text = "Trending Content",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
+                Text("Trending", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+                Spacer(Modifier.height(16.dp))
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
-                    contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -79,18 +69,14 @@ fun HomeScreen() {
 @Composable
 fun HomeVideoCard(video: InvidiousVideo, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
     ) {
         Column {
             AsyncImage(
                 model = video.thumbnailUrl,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+                modifier = Modifier.fillMaxWidth().height(140.dp),
                 contentScale = ContentScale.Crop
             )
             Text(
@@ -98,8 +84,7 @@ fun HomeVideoCard(video: InvidiousVideo, onClick: () -> Unit) {
                 modifier = Modifier.padding(8.dp),
                 color = Color.White,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
