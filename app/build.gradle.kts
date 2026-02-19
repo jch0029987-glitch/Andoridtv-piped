@@ -1,9 +1,5 @@
 plugins {
     id("com.android.application")
-    // Note: Do NOT add id("org.jetbrains.kotlin.android") here!
-    // AGP 9.0.0 has already registered the 'kotlin' extension.
-    
-    // However, you still need to apply the Compose Compiler plugin
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -33,18 +29,19 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // This block is safe now because the extension was created by AGP
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
     }
 }
 
+// NEW SYNTAX FOR GRADLE 9.1 / AGP 9.0
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 dependencies {
-    // ... keep your existing dependencies ...
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
