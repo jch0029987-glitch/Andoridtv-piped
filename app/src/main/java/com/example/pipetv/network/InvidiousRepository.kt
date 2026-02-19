@@ -7,25 +7,6 @@ import okhttp3.Request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// Main Video Object for Search Results
-data class InvidiousVideo(
-    val title: String,
-    val videoId: String,
-    val thumbnailUrl: String = "" // We will populate this via rewrite
-)
-
-// Detailed Video Data for Playback & Quality Selection
-data class InvidiousVideoData(
-    val formatStreams: List<InvidiousStream>
-)
-
-data class InvidiousStream(
-    val url: String,
-    val qualityLabel: String, // e.g., "720p"
-    val resolution: String,   // e.g., "1280x720"
-    val container: String     // e.g., "mp4"
-)
-
 class InvidiousRepository {
     private val client = OkHttpClient()
     private val gson = Gson()
@@ -33,6 +14,7 @@ class InvidiousRepository {
 
     /**
      * Search for videos and force thumbnails to be proxied locally for PdaNet stealth.
+     * Uses InvidiousVideo from InvidiousModels.kt
      */
     suspend fun searchVideos(query: String): List<InvidiousVideo> = withContext(Dispatchers.IO) {
         val url = "$baseUrl/api/v1/search?q=${query.replace(" ", "+")}"
@@ -44,7 +26,7 @@ class InvidiousRepository {
             val type = object : TypeToken<List<InvidiousVideo>>() {}.type
             val videos: List<InvidiousVideo> = gson.fromJson(json, type)
 
-            // Force thumbnails to go through the local phone/server proxy
+            // Rewrites thumbnails to point to your local phone/server proxy
             videos.map { video ->
                 video.copy(
                     thumbnailUrl = "$baseUrl/vi/${video.videoId}/maxresdefault.jpg"
@@ -57,7 +39,7 @@ class InvidiousRepository {
 
     /**
      * Fetches detailed video metadata, including all available quality streams.
-     * Passing local=true ensures the streams are proxied through the server.
+     * Uses InvidiousVideoData from InvidiousModels.kt
      */
     suspend fun getVideoData(videoId: String): InvidiousVideoData? = withContext(Dispatchers.IO) {
         val url = "$baseUrl/api/v1/videos/$videoId?local=true"
@@ -73,12 +55,15 @@ class InvidiousRepository {
     }
 
     /**
-     * Helper to get the default/best starting URL.
+     * Helper to get the initial stream URL.
      */
     suspend fun getStreamUrl(videoId: String): String? {
         val data = getVideoData(videoId)
-        // Prefer 720p as a safe starting point for PdaNet hotspots
+        // Prefer 720p to balance quality and PdaNet hotspot stability
         return data?.formatStreams?.firstOrNull { it.qualityLabel == "720p" }?.url 
             ?: data?.formatStreams?.firstOrNull()?.url
     }
 }
+
+// NOTE: DATA CLASSES REMOVED FROM THIS FILE TO PREVENT REDECLARATION ERRORS.
+// THEY NOW LIVE IN InvidiousModels.kt
