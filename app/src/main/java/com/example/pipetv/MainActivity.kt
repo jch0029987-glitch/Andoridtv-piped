@@ -23,29 +23,24 @@ class MainActivity : ComponentActivity() {
                 var selectedTab by remember { mutableIntStateOf(0) }
 
                 Row(Modifier.fillMaxSize()) {
-                    // Left Side Navigation Rail
-                    NavigationRail(
-                        modifier = Modifier.fillMaxHeight(),
-                        content = {
-                            NavigationRailItem(
-                                selected = selectedTab == 0,
-                                onClick = { selectedTab = 0; navController.navigate("home") },
-                                icon = { Icon(Icons.Default.Home, "Home") }
-                            )
-                            NavigationRailItem(
-                                selected = selectedTab == 1,
-                                onClick = { selectedTab = 1; navController.navigate("search") },
-                                icon = { Icon(Icons.Default.Search, "Search") }
-                            )
-                            NavigationRailItem(
-                                selected = selectedTab == 2,
-                                onClick = { selectedTab = 2; navController.navigate("settings") },
-                                icon = { Icon(Icons.Default.Settings, "Settings") }
-                            )
-                        }
-                    )
+                    NavigationRail {
+                        NavigationRailItem(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0; navController.navigate("home") },
+                            icon = { Icon(Icons.Default.Home, contentDescription = "Home") }
+                        )
+                        NavigationRailItem(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1; navController.navigate("search") },
+                            icon = { Icon(Icons.Default.Search, contentDescription = "Search") }
+                        )
+                        NavigationRailItem(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2; navController.navigate("settings") },
+                            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
+                        )
+                    }
 
-                    // Main Content Area
                     Box(Modifier.fillMaxSize()) {
                         NavHost(navController, startDestination = "home") {
                             composable("home") { HomeScreen() }

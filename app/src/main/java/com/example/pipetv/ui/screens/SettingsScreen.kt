@@ -5,6 +5,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import com.example.pipetv.network.InvidiousRepository
 import kotlinx.coroutines.launch
 
@@ -19,8 +21,9 @@ fun SettingsScreen() {
         Text("Settings", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(32.dp))
 
-        // Update Card
+        // Surface provides the "Click" and "Focus" behavior for TV
         Surface(
+            selected = false,
             onClick = {
                 scope.launch {
                     status = "Checking GitHub..."
@@ -31,13 +34,16 @@ fun SettingsScreen() {
             modifier = Modifier.width(400.dp)
         ) {
             ListItem(
+                selected = false,
+                onClick = { }, // Handled by Surface
                 headlineContent = { Text("Check for Updates") },
                 supportingContent = { Text(status) },
-                trailingContent = { Icon(androidx.compose.material.icons.Icons.Default.Refresh, null) }
+                trailingContent = { Icon(Icons.Default.Refresh, contentDescription = null) }
             )
         }
 
         Spacer(Modifier.height(16.dp))
-        Text("Self-Hosted Instance: 10.78.240.3", style = MaterialTheme.typography.bodySmall)
+        Text("User: jch0029987-glitch", style = MaterialTheme.typography.bodySmall)
+        Text("Host: 10.78.240.3", style = MaterialTheme.typography.bodySmall)
     }
 }
