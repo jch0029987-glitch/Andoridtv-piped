@@ -12,37 +12,29 @@ class InvidiousRepository {
     private val gson = Gson()
     private val baseUrl = "http://10.78.240.3:3000"
 
-    /**
-     * Search for videos and force thumbnails to be proxied locally for PdaNet stealth.
-     * Uses InvidiousVideo from InvidiousModels.kt
-     */
     suspend fun searchVideos(query: String): List<InvidiousVideo> = withContext(Dispatchers.IO) {
         val url = "$baseUrl/api/v1/search?q=${query.replace(" ", "+")}"
-        val request = Request.Builder().url(url).build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0")
+            .build()
 
         try {
             val response = client.newCall(request).execute()
             val json = response.body?.string() ?: ""
             val type = object : TypeToken<List<InvidiousVideo>>() {}.type
-            val videos: List<InvidiousVideo> = gson.fromJson(json, type)
+            val videos: List<InvidiousVideo> = gson.fromJson(json, type) ?: emptyList()
 
-            // Rewrites thumbnails to point to your local phone/server proxy
-            videos.map { video ->
-                video.copy(
-                    thumbnailUrl = "$baseUrl/vi/${video.videoId}/maxresdefault.jpg"
-                )
-            }
+            // Rewrite thumbnails to local proxy for PdaNet stealth
+            videos.map { it.copy(thumbnailUrl = "$baseUrl/vi/${it.videoId}/maxresdefault.jpg") }
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    /**
-     * Fetches detailed video metadata, including all available quality streams.
-     * Uses InvidiousVideoData from InvidiousModels.kt
-     */
     suspend fun getVideoData(videoId: String): InvidiousVideoData? = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/api/v1/videos/$videoId?local=true"
+        // We force quality=dash and local=true to ensure the server tunnels the bits
+        val url = "$baseUrl/api/v1/videos/$videoId?local=true&quality=dash"
         val request = Request.Builder().url(url).build()
 
         try {
@@ -54,16 +46,14 @@ class InvidiousRepository {
         }
     }
 
-    /**
-     * Helper to get the initial stream URL.
-     */
-    suspend fun getStreamUrl(videoId: String): String? {
-        val data = getVideoData(videoId)
-        // Prefer 720p to balance quality and PdaNet hotspot stability
-        return data?.formatStreams?.firstOrNull { it.qualityLabel == "720p" }?.url 
-            ?: data?.formatStreams?.firstOrNull()?.url
+    suspend fun getStreamUrl(videoId: String, preferredHeight: Int = 720): String? {
+        val data = getVideoData(videoId) ?: return null
+        
+        // Strategy: 1. Try preferred height MP4, 2. Try any MP4, 3. Take whatever is first
+        return data.formatStreams.firstOrNull { 
+            it.qualityLabel.contains("${preferredHeight}p") && it.container == "mp4" 
+        }?.url 
+        ?: data.formatStreams.firstOrNull { it.container == "mp4" }?.url
+        ?: data.formatStreams.firstOrNull()?.url
     }
 }
-
-// NOTE: DATA CLASSES REMOVED FROM THIS FILE TO PREVENT REDECLARATION ERRORS.
-// THEY NOW LIVE IN InvidiousModels.kt
