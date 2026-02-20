@@ -30,12 +30,9 @@ class VideoPlayerActivity : ComponentActivity() {
             val context = androidx.compose.ui.platform.LocalContext.current
             val repo = remember { InvidiousRepository() }
             var streamUrl by remember { mutableStateOf<String?>(null) }
-            var isLoading by remember { mutableStateOf(true) }
 
-            // Fetch the stream URL from Invidious
             LaunchedEffect(videoId) {
                 streamUrl = repo.getVideoStreamUrl(videoId)
-                isLoading = false
                 if (streamUrl == null) {
                     Toast.makeText(context, "Could not load stream", Toast.LENGTH_SHORT).show()
                 }
@@ -46,22 +43,19 @@ class VideoPlayerActivity : ComponentActivity() {
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
-                                // FIX: In Media3 1.5.1 Kotlin, use the property 'useTextureView'
-                                // We set to false because SurfaceView supports Hardware Overlays
-                                useTextureView = false 
-                                
-                                // GPU Optimization: Force video to a dedicated hardware plane
+                                // We removed the 'useTextureView' line to fix the compiler error.
+                                // It defaults to SurfaceView, which is what we want for GPU speed.
+
+                                // GPU Optimization: Force video to hardware overlay plane
                                 (videoSurfaceView as? SurfaceView)?.setZOrderMediaOverlay(true)
 
                                 player = ExoPlayer.Builder(ctx).build().also { exo ->
-                                    val mediaItem = MediaItem.fromUri(streamUrl!!)
-                                    exo.setMediaItem(mediaItem)
+                                    exo.setMediaItem(MediaItem.fromUri(streamUrl!!))
                                     exo.prepare()
                                     
-                                    // Error handling for shaky hotspot connections
                                     exo.addListener(object : Player.Listener {
                                         override fun onPlayerError(error: PlaybackException) {
-                                            Toast.makeText(ctx, "Playback Error: ${error.errorCodeName}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(ctx, "Error: ${error.errorCodeName}", Toast.LENGTH_SHORT).show()
                                         }
                                     })
                                     
@@ -79,7 +73,6 @@ class VideoPlayerActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        // Pause to save data on your carrier hotspot when app is backgrounded
         player?.pause()
     }
 
