@@ -6,15 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
-import androidx.tv.material3.*   // TV Material (package name is material3)
-import androidx.compose.material3.Icon
+import androidx.tv.material3.*
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import com.example.pipetv.ui.screens.*
 import com.example.pipetv.ui.theme.PipeTVTheme
 
@@ -34,56 +28,41 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppShell() {
     val navController = rememberNavController()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selected by remember { mutableStateOf("home") }
 
-    Row(Modifier.fillMaxSize()) {
+    NavigationDrawer(
+        drawerContent = {
+            Column {
+                NavigationDrawerItem(
+                    selected = selected == "home",
+                    onClick = {
+                        selected = "home"
+                        navController.navigate("home")
+                    }
+                ) { Text("Home") }
 
-        // TV Navigation Rail
-        NavigationRail(
-            modifier = Modifier.fillMaxHeight(),
-            header = { Spacer(Modifier.height(16.dp)) }
-        ) {
-            NavigationRailItem(
-                selected = selectedTab == 0,
-                onClick = {
-                    selectedTab = 0
-                    navController.navigate("home")
-                },
-                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                label = { Text("Home") }
-            )
+                NavigationDrawerItem(
+                    selected = selected == "search",
+                    onClick = {
+                        selected = "search"
+                        navController.navigate("search")
+                    }
+                ) { Text("Search") }
 
-            NavigationRailItem(
-                selected = selectedTab == 1,
-                onClick = {
-                    selectedTab = 1
-                    navController.navigate("search")
-                },
-                icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                label = { Text("Search") }
-            )
-
-            NavigationRailItem(
-                selected = selectedTab == 2,
-                onClick = {
-                    selectedTab = 2
-                    navController.navigate("settings")
-                },
-                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                label = { Text("Settings") }
-            )
-        }
-
-        // Main content area
-        Box(Modifier.fillMaxSize()) {
-            NavHost(
-                navController = navController,
-                startDestination = "home"
-            ) {
-                composable("home") { HomeScreen() }
-                composable("search") { SearchScreen() }
-                composable("settings") { SettingsScreen() }
+                NavigationDrawerItem(
+                    selected = selected == "settings",
+                    onClick = {
+                        selected = "settings"
+                        navController.navigate("settings")
+                    }
+                ) { Text("Settings") }
             }
+        }
+    ) {
+        NavHost(navController = navController, startDestination = "home") {
+            composable("home") { HomeScreen() }
+            composable("search") { SearchScreen() }
+            composable("settings") { SettingsScreen() }
         }
     }
 }
