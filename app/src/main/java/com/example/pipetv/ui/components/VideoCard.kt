@@ -35,17 +35,18 @@ fun VideoCard(
             Card(
                 onClick = onClick,
                 modifier = Modifier.aspectRatio(16f / 9f),
+                // Fix: Uses correct CardShape type
                 shape = CardDefaults.shape(MaterialTheme.shapes.medium)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        // FIX: Added ?. for safe call and used the first thumbnail's URL
+                        // Fix: Safe call (?.) on nullable thumbnails list
                         .data(video.videoThumbnails?.firstOrNull()?.url)
                         .crossfade(true)
-                        // Chromecast HD Optimization: Prevents OOM by scaling to card size
+                        // RAM Optimization: Downscale to card size for Chromecast HD
                         .size(426, 240)
                         .build(),
-                    // FIX: Fallback string for null titles to satisfy contentDescription (String)
+                    // Fix: Provide fallback string for nullable title
                     contentDescription = video.title ?: "Video Thumbnail",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -54,7 +55,7 @@ fun VideoCard(
         },
         title = {
             Text(
-                // FIX: Fallback for title
+                // Fix: Handle nullable String
                 text = video.title ?: "Unknown Title",
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 2,
@@ -64,7 +65,6 @@ fun VideoCard(
         },
         subtitle = {
             Text(
-                // FIX: Fallback for author/views
                 text = "${video.author ?: "Unknown"} • ${video.viewCountText ?: ""}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
