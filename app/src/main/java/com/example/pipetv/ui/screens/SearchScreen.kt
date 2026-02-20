@@ -3,6 +3,7 @@ package com.example.pipetv.ui.screens
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,50 +28,37 @@ fun SearchScreen() {
     var results by remember { mutableStateOf(emptyList<InvidiousVideo>()) }
     var isSearching by remember { mutableStateOf(false) }
 
-    // Debounced Search: Saves data on your hotspot by not searching every keystroke
     LaunchedEffect(query) {
         if (query.isBlank()) {
             results = emptyList()
             return@LaunchedEffect
         }
         isSearching = true
-        delay(600) // Wait for user to stop typing
+        delay(600)
         results = repo.searchVideos(query)
         isSearching = false
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp)
-    ) {
-        // Search Input field optimized for TV Remote
+    Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
+        // TV-compatible Input
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            label = { Text("Search YouTube (via Invidious)") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
+            label = { androidx.compose.material3.Text("Search...") },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
             singleLine = true
         )
 
         if (isSearching) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Searching...", style = MaterialTheme.typography.bodyLarge)
+                Text("Searching...")
             }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        // GPU Optimization: Rasterizes the grid view for smoother scrolling
-                        clip = true
-                        compositingStrategy = CompositingStrategy.Auto
-                    }
+                modifier = Modifier.fillMaxSize()
             ) {
                 items(results) { video ->
                     VideoCard(
@@ -80,10 +68,6 @@ fun SearchScreen() {
                                 putExtra("VIDEO_ID", video.videoId)
                             }
                             context.startActivity(intent)
-                        },
-                        // Individual card GPU layering
-                        modifier = Modifier.graphicsLayer {
-                            compositingStrategy = CompositingStrategy.ModulateAlpha
                         }
                     )
                 }
