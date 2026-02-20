@@ -24,7 +24,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use debug signing for personal TV builds
+            // Debug signing for personal TV builds
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -39,7 +39,6 @@ android {
     }
 }
 
-// Kotlin JVM target (Gradle 9 syntax)
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -56,7 +55,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.12.4")
 
     // ─────────────────────────────
-    // Compose BOM (aligns versions)
+    // Compose BOM (version alignment)
     // ─────────────────────────────
     implementation(platform("androidx.compose:compose-bom:2026.02.00"))
     implementation("androidx.compose.ui:ui")
@@ -64,11 +63,10 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.2")
 
     // ─────────────────────────────
-    // Android TV Compose (STABLE)
+    // Android TV Compose (REAL & RESOLVABLE)
     // ─────────────────────────────
-    implementation("androidx.tv:tv-material:1.0.1")
-    implementation("androidx.tv:tv-material3:1.0.1")
-    implementation("androidx.tv:tv-foundation:1.0.0")
+    implementation("androidx.tv:tv-material:1.0.0")
+    implementation("androidx.tv:tv-foundation:1.0.0-alpha12")
 
     // ─────────────────────────────
     // Image Loading (Coil 3)
