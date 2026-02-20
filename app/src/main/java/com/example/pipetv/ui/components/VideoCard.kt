@@ -4,11 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
-// CHANGE THESE TWO LINES:
-import coil3.compose.AsyncImage 
+import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.example.pipetv.network.InvidiousVideo
@@ -20,20 +20,25 @@ fun VideoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     StandardCardContainer(
+        modifier = modifier.width(240.dp),
         imageCard = {
             Card(
                 onClick = onClick,
-                modifier = Modifier.aspectRatio(16f / 9f)
+                modifier = Modifier.aspectRatio(16f / 9f),
+                shape = ClickableSurfaceDefaults.shape(MaterialTheme.shapes.medium)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(video.videoThumbnails.firstOrNull()?.url)
+                        // Fix 1: Added ?. for safe call on thumbnails list
+                        .data(video.videoThumbnails?.firstOrNull()?.url) 
+                        .allowHardware(true) // GPU optimization
                         .crossfade(true)
                         .build(),
-                    contentDescription = video.title,
+                    // Fix 2: Added ?: "" to provide a fallback string if title is null
+                    contentDescription = video.title ?: "Video Thumbnail",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -41,20 +46,22 @@ fun VideoCard(
         },
         title = {
             Text(
-                text = video.title,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
+                // Fix 2: Provide fallback for title
+                text = video.title ?: "Unknown Title",
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 8.dp)
             )
         },
         subtitle = {
             Text(
-                text = "${video.author} • ${video.viewCountText}",
+                // Fix 2: Provide fallback for author and view count
+                text = "${video.author ?: "Unknown"} • ${video.viewCountText ?: ""}",
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 maxLines = 1
             )
-        },
-        modifier = modifier.width(200.dp)
+        }
     )
 }
