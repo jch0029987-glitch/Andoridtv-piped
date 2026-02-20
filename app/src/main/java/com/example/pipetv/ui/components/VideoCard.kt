@@ -3,6 +3,8 @@ package com.example.pipetv.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,22 +25,26 @@ fun VideoCard(
     val context = LocalContext.current
 
     StandardCardContainer(
-        modifier = modifier.width(240.dp),
+        modifier = modifier
+            .width(240.dp)
+            .graphicsLayer {
+                // Force the GPU to treat this card as a single texture
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            },
         imageCard = {
             Card(
                 onClick = onClick,
                 modifier = Modifier.aspectRatio(16f / 9f),
-                // FIX 1: Use CardDefaults.shape to match the expected type
                 shape = CardDefaults.shape(MaterialTheme.shapes.medium)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(video.videoThumbnails?.firstOrNull()?.url)
-                        // FIX 2: Coil 3 handles hardware bitmaps by default.
-                        // We use crossfade for GPU-accelerated transitions.
                         .crossfade(true)
+                        // Chromecast HD specific: decode to exact size to save 1.5GB RAM usage
+                        .size(426, 240)
                         .build(),
-                    contentDescription = video.title ?: "Video Thumbnail",
+                    contentDescription = video.title ?: "Video",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )

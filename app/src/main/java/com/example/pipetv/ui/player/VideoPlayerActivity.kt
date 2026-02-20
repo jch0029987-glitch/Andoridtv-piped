@@ -1,7 +1,7 @@
 package com.example.pipetv.ui.player
 
 import android.os.Bundle
-import android.widget.Toast
+import android.view.SurfaceView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.pipetv.network.InvidiousRepository
@@ -25,16 +24,11 @@ class VideoPlayerActivity : ComponentActivity() {
         val videoId = intent.getStringExtra("VIDEO_ID") ?: ""
 
         setContent {
-            val scope = rememberCoroutineScope()
             val repo = remember { InvidiousRepository() }
             var streamUrl by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(videoId) {
                 streamUrl = repo.getVideoStreamUrl(videoId)
-                if (streamUrl == null) {
-                    Toast.makeText(this@VideoPlayerActivity, "Error fetching stream", Toast.LENGTH_LONG).show()
-                    finish()
-                }
             }
 
             Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -42,15 +36,15 @@ class VideoPlayerActivity : ComponentActivity() {
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
+                                // Use SurfaceView for best hardware sync on CCwGTV
+                                setUseTextureView(false)
+                                
+                                // GPU Trick: Move video to the hardware overlay plane
+                                (videoSurfaceView as? SurfaceView)?.setZOrderMediaOverlay(true)
+
                                 player = ExoPlayer.Builder(ctx).build().also { exo ->
-                                    val mediaItem = MediaItem.fromUri(streamUrl!!)
-                                    exo.setMediaItem(mediaItem)
+                                    exo.setMediaItem(MediaItem.fromUri(streamUrl!!))
                                     exo.prepare()
-                                    exo.addListener(object : Player.Listener {
-                                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                            Toast.makeText(ctx, "Playback Error: ${error.errorCodeName}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    })
                                     exo.playWhenReady = true
                                 }
                                 this.player = player

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
@@ -22,29 +23,26 @@ fun HomeScreen() {
     var videos by remember { mutableStateOf(emptyList<InvidiousVideo>()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Load trending videos on launch
     LaunchedEffect(Unit) {
         videos = repo.getTrendingVideos()
         isLoading = false
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            text = "Trending Now",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
+        Text("Trending", style = MaterialTheme.typography.headlineMedium)
+        
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Loading feed...")
+                Text("Loading...")
             }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { clip = true } // Force GPU clipping
             ) {
                 items(videos) { video ->
                     VideoCard(
