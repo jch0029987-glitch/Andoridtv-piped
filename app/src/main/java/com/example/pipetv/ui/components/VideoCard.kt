@@ -7,7 +7,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
-import coil.compose.AsyncImage
+// CHANGE THESE TWO LINES:
+import coil3.compose.AsyncImage 
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.example.pipetv.network.InvidiousVideo
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -17,7 +20,8 @@ fun VideoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // StandardCardContainer handles the focus state and scaling for TV
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     StandardCardContainer(
         imageCard = {
             Card(
@@ -25,7 +29,10 @@ fun VideoCard(
                 modifier = Modifier.aspectRatio(16f / 9f)
             ) {
                 AsyncImage(
-                    model = video.videoThumbnails.firstOrNull()?.url ?: "",
+                    model = ImageRequest.Builder(context)
+                        .data(video.videoThumbnails.firstOrNull()?.url)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = video.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
