@@ -28,7 +28,7 @@ fun VideoCard(
         modifier = modifier
             .width(240.dp)
             .graphicsLayer {
-                // Force the GPU to treat this card as a single texture
+                // GPU Optimization: Treats the card as a single texture
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
         imageCard = {
@@ -39,12 +39,14 @@ fun VideoCard(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
+                        // FIX: Added ?. for safe call and used the first thumbnail's URL
                         .data(video.videoThumbnails?.firstOrNull()?.url)
                         .crossfade(true)
-                        // Chromecast HD specific: decode to exact size to save 1.5GB RAM usage
+                        // Chromecast HD Optimization: Prevents OOM by scaling to card size
                         .size(426, 240)
                         .build(),
-                    contentDescription = video.title ?: "Video",
+                    // FIX: Fallback string for null titles to satisfy contentDescription (String)
+                    contentDescription = video.title ?: "Video Thumbnail",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -52,6 +54,7 @@ fun VideoCard(
         },
         title = {
             Text(
+                // FIX: Fallback for title
                 text = video.title ?: "Unknown Title",
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 2,
@@ -61,6 +64,7 @@ fun VideoCard(
         },
         subtitle = {
             Text(
+                // FIX: Fallback for author/views
                 text = "${video.author ?: "Unknown"} • ${video.viewCountText ?: ""}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),

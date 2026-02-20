@@ -15,6 +15,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.pipetv.network.InvidiousRepository
@@ -34,7 +35,7 @@ class VideoPlayerActivity : ComponentActivity() {
             LaunchedEffect(videoId) {
                 streamUrl = repo.getVideoStreamUrl(videoId)
                 if (streamUrl == null) {
-                    Toast.makeText(context, "Could not load stream", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Link expired or invalid", Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -43,19 +44,24 @@ class VideoPlayerActivity : ComponentActivity() {
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
-                                // We removed the 'useTextureView' line to fix the compiler error.
-                                // It defaults to SurfaceView, which is what we want for GPU speed.
-
-                                // GPU Optimization: Force video to hardware overlay plane
+                                // Defaulting to SurfaceView for GPU performance
+                                // We removed the useTextureView line to prevent build errors
+                                
+                                // GPU Overlay: Keeps UI snappy while video plays
                                 (videoSurfaceView as? SurfaceView)?.setZOrderMediaOverlay(true)
 
-                                player = ExoPlayer.Builder(ctx).build().also { exo ->
-                                    exo.setMediaItem(MediaItem.fromUri(streamUrl!!))
+                                // Fix for ERROR_CODE_FAILED_RUNTIME_CHECK
+                                val renderersFactory = DefaultRenderersFactory(ctx)
+                                    .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+
+                                player = ExoPlayer.Builder(ctx, renderersFactory).build().also { exo ->
+                                    val mediaItem = MediaItem.fromUri(streamUrl!!)
+                                    exo.setMediaItem(mediaItem)
                                     exo.prepare()
                                     
                                     exo.addListener(object : Player.Listener {
                                         override fun onPlayerError(error: PlaybackException) {
-                                            Toast.makeText(ctx, "Error: ${error.errorCodeName}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(ctx, "Exo Error: ${error.errorCodeName}", Toast.LENGTH_LONG).show()
                                         }
                                     })
                                     
