@@ -6,9 +6,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
 import androidx.tv.material3.*
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import com.example.pipetv.ui.screens.*
 import com.example.pipetv.ui.theme.PipeTVTheme
 
@@ -28,41 +32,52 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppShell() {
     val navController = rememberNavController()
-    var selected by remember { mutableStateOf("home") }
+    // Tracking which screen we are on
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
+    // NavigationDrawer provides the side panel behavior
     NavigationDrawer(
-        drawerContent = {
-            Column {
+        drawerContent = { drawerValue ->
+            Column(
+                Modifier.fillMaxHeight().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Home Item
                 NavigationDrawerItem(
-                    selected = selected == "home",
-                    onClick = {
-                        selected = "home"
-                        navController.navigate("home")
-                    }
-                ) { Text("Home") }
+                    selected = currentRoute == "home",
+                    onClick = { navController.navigate("home") },
+                    leadingContent = { Icon(Icons.Default.Home, contentDescription = null) }
+                ) {
+                    Text("Home")
+                }
 
+                // Search Item
                 NavigationDrawerItem(
-                    selected = selected == "search",
-                    onClick = {
-                        selected = "search"
-                        navController.navigate("search")
-                    }
-                ) { Text("Search") }
+                    selected = currentRoute == "search",
+                    onClick = { navController.navigate("search") },
+                    leadingContent = { Icon(Icons.Default.Search, contentDescription = null) }
+                ) {
+                    Text("Search")
+                }
 
+                // Settings Item
                 NavigationDrawerItem(
-                    selected = selected == "settings",
-                    onClick = {
-                        selected = "settings"
-                        navController.navigate("settings")
-                    }
-                ) { Text("Settings") }
+                    selected = currentRoute == "settings",
+                    onClick = { navController.navigate("settings") },
+                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) }
+                ) {
+                    Text("Settings")
+                }
             }
         }
     ) {
-        NavHost(navController = navController, startDestination = "home") {
-            composable("home") { HomeScreen() }
-            composable("search") { SearchScreen() }
-            composable("settings") { SettingsScreen() }
+        // This box holds your actual screen content to the right of the panel
+        Box(Modifier.fillMaxSize().padding(start = 16.dp)) {
+            NavHost(navController = navController, startDestination = "home") {
+                composable("home") { HomeScreen() }
+                composable("search") { SearchScreen() }
+                composable("settings") { SettingsScreen() }
+            }
         }
     }
 }
