@@ -28,16 +28,16 @@ fun VideoCard(
             Card(
                 onClick = onClick,
                 modifier = Modifier.aspectRatio(16f / 9f),
-                shape = ClickableSurfaceDefaults.shape(MaterialTheme.shapes.medium)
+                // FIX 1: Use CardDefaults.shape to match the expected type
+                shape = CardDefaults.shape(MaterialTheme.shapes.medium)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        // Fix 1: Added ?. for safe call on thumbnails list
-                        .data(video.videoThumbnails?.firstOrNull()?.url) 
-                        .allowHardware(true) // GPU optimization
+                        .data(video.videoThumbnails?.firstOrNull()?.url)
+                        // FIX 2: Coil 3 handles hardware bitmaps by default.
+                        // We use crossfade for GPU-accelerated transitions.
                         .crossfade(true)
                         .build(),
-                    // Fix 2: Added ?: "" to provide a fallback string if title is null
                     contentDescription = video.title ?: "Video Thumbnail",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -46,7 +46,6 @@ fun VideoCard(
         },
         title = {
             Text(
-                // Fix 2: Provide fallback for title
                 text = video.title ?: "Unknown Title",
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 2,
@@ -56,7 +55,6 @@ fun VideoCard(
         },
         subtitle = {
             Text(
-                // Fix 2: Provide fallback for author and view count
                 text = "${video.author ?: "Unknown"} • ${video.viewCountText ?: ""}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
