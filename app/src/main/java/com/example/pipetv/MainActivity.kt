@@ -1,82 +1,43 @@
 package com.example.pipetv
 
 import android.os.Bundle
+import android.os.Process
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.*
-import androidx.tv.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import com.example.pipetv.ui.screens.*
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import com.example.pipetv.ui.screens.HomeScreen
 import com.example.pipetv.ui.theme.PipeTVTheme
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // PERFORMANCE: Set the thread priority to DISPLAY.
+        // This ensures the UI thread gets more CPU cycles than background 
+        // image loading or network requests, preventing remote lag.
+        Process.setThreadPriority(Process.THREAD_PRIORITY_DISPLAY)
+
         setContent {
             PipeTVTheme {
-                MainAppShell()
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun MainAppShell() {
-    val navController = rememberNavController()
-    // Tracking which screen we are on
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-
-    // NavigationDrawer provides the side panel behavior
-    NavigationDrawer(
-        drawerContent = { drawerValue ->
-            Column(
-                Modifier.fillMaxHeight().padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Home Item
-                NavigationDrawerItem(
-                    selected = currentRoute == "home",
-                    onClick = { navController.navigate("home") },
-                    leadingContent = { Icon(Icons.Default.Home, contentDescription = null) }
+                // Surface provides the standard TV background color and handles 
+                // basic touch/focus containment for the app.
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = androidx.compose.ui.graphics.RectangleShape,
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 ) {
-                    Text("Home")
+                    HomeScreen()
                 }
-
-                // Search Item
-                NavigationDrawerItem(
-                    selected = currentRoute == "search",
-                    onClick = { navController.navigate("search") },
-                    leadingContent = { Icon(Icons.Default.Search, contentDescription = null) }
-                ) {
-                    Text("Search")
-                }
-
-                // Settings Item
-                NavigationDrawerItem(
-                    selected = currentRoute == "settings",
-                    onClick = { navController.navigate("settings") },
-                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) }
-                ) {
-                    Text("Settings")
-                }
-            }
-        }
-    ) {
-        // This box holds your actual screen content to the right of the panel
-        Box(Modifier.fillMaxSize().padding(start = 16.dp)) {
-            NavHost(navController = navController, startDestination = "home") {
-                composable("home") { HomeScreen() }
-                composable("search") { SearchScreen() }
-                composable("settings") { SettingsScreen() }
             }
         }
     }

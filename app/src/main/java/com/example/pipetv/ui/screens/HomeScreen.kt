@@ -42,9 +42,16 @@ fun HomeScreen() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { clip = true } // Force GPU clipping
+                    .graphicsLayer { 
+                        // HW Acceleration: Clips the grid rendering to its bounds
+                        clip = true 
+                    }
             ) {
-                items(videos) { video ->
+                items(
+                    items = videos,
+                    // PERFORMANCE: Stable keys prevent unnecessary recompositions
+                    key = { it.videoId ?: it.hashCode() }
+                ) { video ->
                     VideoCard(
                         video = video,
                         onClick = {
