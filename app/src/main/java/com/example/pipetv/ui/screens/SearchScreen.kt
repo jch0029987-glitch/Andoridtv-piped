@@ -1,75 +1,38 @@
 package com.example.pipetv.ui.screens
 
-import android.content.Intent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.lazy.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.*
-import com.example.pipetv.network.InvidiousRepository
-import com.example.pipetv.network.InvidiousVideo
+import androidx.navigation.NavController
+import com.example.pipetv.PipeTVApp
 import com.example.pipetv.ui.components.VideoCard
-import com.example.pipetv.ui.player.VideoPlayerActivity
-import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun SearchScreen() {
-    val context = LocalContext.current
-    val repo = remember { InvidiousRepository() }
-    
+fun SearchScreen(navController: NavController, app: PipeTVApp) {
     var query by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf(emptyList<InvidiousVideo>()) }
-    var isSearching by remember { mutableStateOf(false) }
+    val results by app.repository.searchResults.collectAsState()
 
-    LaunchedEffect(query) {
-        if (query.isBlank()) {
-            results = emptyList()
-            return@LaunchedEffect
-        }
-        isSearching = true
-        delay(600)
-        results = repo.searchVideos(query)
-        isSearching = false
-    }
-
-    Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
-        // TV-compatible Input
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it },
-            label = { androidx.compose.material3.Text("Search...") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            onValueChange = { 
+                query = it
+                app.repository.searchVideos(it) 
+            },
+            label = { Text("Search") },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
 
-        if (isSearching) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Searching...")
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(results) { video ->
-                    VideoCard(
-                        video = video,
-                        onClick = {
-                            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
-                                putExtra("VIDEO_ID", video.videoId)
-                            }
-                            context.startActivity(intent)
-                        }
-                    )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(results) { video ->
+                VideoCard(video = video) {
+                    // Navigation to player logic
                 }
             }
         }

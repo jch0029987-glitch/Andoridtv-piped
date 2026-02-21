@@ -1,55 +1,59 @@
 package com.example.pipetv.network
 
-import com.example.pipetv.PipeTVApp
+import com.example.pipetv.data.models.VideoItem
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import okhttp3.Request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class InvidiousRepository(private val app: PipeTVApp) {
+class InvidiousRepository {
+    // Cellular IP for your phone-hosted Invidious server
+    private val BASE_URL = "http://10.72.41.71:3000"
+    
+    private val client = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36")
+                .build()
+            chain.proceed(request)
+        }
+        .build()
+        
     private val gson = Gson()
-    private val host = "http://10.78.240.3"
-    private val apiBase = "$host/api/v1"
 
-    suspend fun getTrendingVideos(): List<InvidiousVideo> = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder().url("$apiBase/trending").build()
-            app.okHttpClient.newCall(request).execute().use { response ->
-                val json = response.body?.string() ?: return@withContext emptyList()
-                val type = object : TypeToken<List<InvidiousVideo>>() {}.type
-                gson.fromJson(json, type)
+    private val _trendingVideos = MutableStateFlow<List<VideoItem>>(emptyList())
+    val trendingVideos: StateFlow<List<VideoItem>> = _trendingVideos
+
+    private val _searchResults = MutableStateFlow<List<VideoItem>>(emptyList())
+    val searchResults: StateFlow<List<VideoItem>> = _searchResults
+
+    suspend fun fetchTrending() {
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/v1/trending")
+                    .build()
+                
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val json = response.body?.string()
+                        val type = object : TypeToken<List<VideoItem>>() {}.type
+                        val videos: List<VideoItem> = gson.fromJson(json, type)
+                        _trendingVideos.value = videos ?: emptyList()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 
-    suspend fun getVideoStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder().url("$apiBase/videos/$videoId").build()
-            app.okHttpClient.newCall(request).execute().use { response ->
-                val json = response.body?.string() ?: return@withContext null
-                val detail = gson.fromJson(json, VideoDetail::class.java)
-                
-                // Get the first available stream
-                val rawUrl = detail.adaptiveFormats?.firstOrNull()?.url 
-                            ?: detail.formatStreams?.firstOrNull()?.url
-
-                // Fix: Prepend the local IP if Invidious sends a relative path
-                when {
-                    rawUrl == null -> null
-                    rawUrl.startsWith("http") -> rawUrl
-                    else -> "$host$rawUrl"
-                }
-            }
-        } catch (e: Exception) {
-            null
-        }
+    fun searchVideos(query: String) {
+        if (query.isBlank()) return
+        // You can implement the search API call here similar to fetchTrending
     }
 }
-
-data class InvidiousVideo(val title: String?, val videoId: String?, val author: String?, val videoThumbnails: List<Thumbnail>?)
-data class Thumbnail(val url: String)
-data class VideoDetail(val formatStreams: List<Stream>?, val adaptiveFormats: List<Stream>?)
-data class Stream(val url: String)
