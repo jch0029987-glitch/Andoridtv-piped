@@ -1,6 +1,5 @@
 package com.example.pipetv.network
 
-import android.util.Log
 import com.example.pipetv.data.models.VideoItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,28 +17,28 @@ class InvidiousRepository {
     private val _trendingVideos = MutableStateFlow<List<VideoItem>>(emptyList())
     val trendingVideos: StateFlow<List<VideoItem>> = _trendingVideos
 
+    private val _searchResults = MutableStateFlow<List<VideoItem>>(emptyList())
+    val searchResults: StateFlow<List<VideoItem>> = _searchResults
+
     suspend fun fetchTrending() {
         withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder()
-                    .url("$BASE_URL/api/v1/trending")
-                    .build()
-                
+                val request = Request.Builder().url("$BASE_URL/api/v1/trending").build()
                 client.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         val json = response.body?.string()
                         val type = object : TypeToken<List<VideoItem>>() {}.type
-                        val videos: List<VideoItem> = gson.fromJson(json, type)
-                        
-                        Log.d("PipeTV", "Fetched ${videos.size} videos")
-                        _trendingVideos.value = videos
-                    } else {
-                        Log.e("PipeTV", "Server error: ${response.code}")
+                        _trendingVideos.value = gson.fromJson(json, type) ?: emptyList()
                     }
                 }
-            } catch (e: Exception) {
-                Log.e("PipeTV", "Network error: ${e.message}")
-            }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    fun searchVideos(query: String) {
+        // Simple search stub - you can add the network call here later
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
         }
     }
 
