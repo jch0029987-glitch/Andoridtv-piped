@@ -22,8 +22,7 @@ fun VideoCard(video: VideoItem, onClick: () -> Unit) {
             )
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(text = video.title, maxLines = 2, style = MaterialTheme.typography.titleMedium)
-                // Use authorName instead of author
-                Text(text = video.authorName ?: "Unknown", style = MaterialTheme.typography.bodySmall)
+                Text(text = video.authorName, style = MaterialTheme.typography.bodySmall)
                 if (viewCountText.isNotEmpty()) {
                     Text(text = viewCountText, style = MaterialTheme.typography.bodySmall)
                 }
