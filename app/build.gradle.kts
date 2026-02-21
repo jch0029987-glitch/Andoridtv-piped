@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.pipetv"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.pipetv"
@@ -32,41 +32,41 @@ android {
     }
 }
 
-// Configures JVM target safely when Kotlin plugin is provided by the root
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        jvmTarget = "11"
+// Modern Gradle 9+ way to set JVM target
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 
 dependencies {
-    // Core AndroidX & Activity
+    // Core AndroidX
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.10.0")
 
-    // Compose BOM (Manages versions for UI, Material3, etc.)
+    // Compose
     implementation(platform("androidx.compose:compose-bom:2025.01.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.foundation:foundation") 
+    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
     // Android TV Support
     implementation("androidx.tv:tv-material:1.0.0")
     implementation("androidx.tv:tv-foundation:1.0.0-alpha12")
 
-    // Networking & PDAnet Masking
+    // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.squareup.okio:okio:3.9.1")
 
-    // Image Loading (Coil 3)
+    // Image Loading
     implementation("io.coil-kt.coil3:coil-compose:3.0.0-rc01")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0-rc01")
 
-    // Media3 Playback Stack
+    // Media3 Playback
     val media3Version = "1.5.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")
