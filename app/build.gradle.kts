@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -26,19 +25,14 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
     buildFeatures {
         compose = true
     }
 }
 
 /**
- * CI-safe Kotlin configuration.
- * Replaces kotlinOptions { jvmTarget = "11" }
+ * AGP 9 uses built-in Kotlin support.
+ * This replaces kotlinOptions { jvmTarget = "11" }
  */
 kotlin {
     jvmToolchain(11)
@@ -70,7 +64,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.0.0-rc01")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0-rc01")
 
-    // Media3 Playback Stack
+    // Media3 Playback
     val media3Version = "1.5.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")
