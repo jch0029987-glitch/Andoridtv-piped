@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class InvidiousRepository {
-    // Cellular IP for your phone-hosted Invidious server
     private val BASE_URL = "http://10.72.41.71:3000"
     
     private val client = OkHttpClient.Builder()
@@ -24,36 +23,31 @@ class InvidiousRepository {
         .build()
         
     private val gson = Gson()
-
     private val _trendingVideos = MutableStateFlow<List<VideoItem>>(emptyList())
     val trendingVideos: StateFlow<List<VideoItem>> = _trendingVideos
-
     private val _searchResults = MutableStateFlow<List<VideoItem>>(emptyList())
     val searchResults: StateFlow<List<VideoItem>> = _searchResults
+
+    // NEW: Function to get the stream URL for Media3
+    fun getVideoStreamUrl(videoId: String): String {
+        return "$BASE_URL/latest_version?id=$videoId&itag=22"
+    }
 
     suspend fun fetchTrending() {
         withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder()
-                    .url("$BASE_URL/api/v1/trending")
-                    .build()
-                
+                val request = Request.Builder().url("$BASE_URL/api/v1/trending").build()
                 client.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         val json = response.body?.string()
                         val type = object : TypeToken<List<VideoItem>>() {}.type
-                        val videos: List<VideoItem> = gson.fromJson(json, type)
+                        val videos: List<VideoItem>? = gson.fromJson(json, type)
                         _trendingVideos.value = videos ?: emptyList()
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    fun searchVideos(query: String) {
-        if (query.isBlank()) return
-        // You can implement the search API call here similar to fetchTrending
-    }
+    fun searchVideos(query: String) { /* Search logic here */ }
 }

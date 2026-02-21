@@ -13,21 +13,17 @@ import com.example.pipetv.data.models.VideoItem
 fun VideoCard(video: VideoItem, onClick: () -> Unit) {
     val viewCountText = if (video.viewCount > 0) "${video.viewCount} views" else ""
 
-    Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
+    Card(modifier = Modifier.padding(8.dp).fillMaxWidth().clickable { onClick() }) {
         Column {
             AsyncImage(
-                model = video.thumbnailUrl,
-                contentDescription = null,
+                model = video.thumbnailUrl, 
+                contentDescription = null, 
                 modifier = Modifier.height(120.dp).fillMaxWidth()
             )
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(text = video.title, maxLines = 2, style = MaterialTheme.typography.titleMedium)
-                Text(text = video.author, style = MaterialTheme.typography.bodySmall)
+                // Use authorName instead of author
+                Text(text = video.authorName ?: "Unknown", style = MaterialTheme.typography.bodySmall)
                 if (viewCountText.isNotEmpty()) {
                     Text(text = viewCountText, style = MaterialTheme.typography.bodySmall)
                 }
