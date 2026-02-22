@@ -4,6 +4,6 @@ import android.app.Application
 import com.example.pipetv.network.InvidiousRepository
 
 class PipeTVApp : Application() {
-    // This allows the screens to access the repository via the 'app' parameter
-    val repository = InvidiousRepository()
+    // Lazy ensures it doesn't block the main thread during app launch
+    val repository: InvidiousRepository by lazy { InvidiousRepository() }
 }
