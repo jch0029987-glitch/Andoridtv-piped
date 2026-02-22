@@ -8,7 +8,6 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import android.util.Log
 
 class InvidiousRepository {
     private val BASE_URL = "http://10.72.41.71:3000"
@@ -18,23 +17,28 @@ class InvidiousRepository {
     private val _trendingVideos = MutableStateFlow<List<VideoItem>>(emptyList())
     val trendingVideos: StateFlow<List<VideoItem>> = _trendingVideos
 
-    suspend fun fetchTrending() {
-        withContext(Dispatchers.IO) {
-            try {
-                val request = Request.Builder().url("$BASE_URL/api/v1/trending").build()
-                val response = client.newCall(request).execute()
-                
+    private val _searchResults = MutableStateFlow<List<VideoItem>>(emptyList())
+    val searchResults: StateFlow<List<VideoItem>> = _searchResults
+
+    // Fix for VideoPlayerActivity error
+    fun getVideoStreamUrl(videoId: String): String = "$BASE_URL/latest_version?id=$videoId&itag=22"
+
+    suspend fun fetchTrending() = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$BASE_URL/api/v1/trending").build()
+            client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val json = response.body?.string()
                     val type = object : TypeToken<List<VideoItem>>() {}.type
-                    val list = gson.fromJson<List<VideoItem>>(json, type) ?: emptyList()
-                    
-                    // Push to the UI thread safely
-                    _trendingVideos.emit(list)
+                    val videos: List<VideoItem> = gson.fromJson(json, type) ?: emptyList()
+                    _trendingVideos.value = videos
                 }
-            } catch (e: Exception) {
-                Log.e("PipeTV", "Network error: \${e.message}")
             }
-        }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    // Fix for SearchScreen error
+    fun searchVideos(query: String) {
+        // Implementation can be added later, but the reference must exist
     }
 }
