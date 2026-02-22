@@ -1,13 +1,15 @@
 package com.example.pipetv.data.models
 
+import com.google.gson.annotations.SerializedName
+
 data class VideoItem(
+    @SerializedName("videoId", alternate = ["id"])
     val videoId: String,
     val title: String,
-    val videoThumbnails: List<Thumbnail>? = null, // Invidious often nests thumbnails
+    val videoThumbnails: List<Thumbnail>? = null,
     val author: String,
     val viewCount: Long = 0
 ) {
-    // Helper to get a single URL for AsyncImage
     val thumbnailUrl: String
         get() = videoThumbnails?.firstOrNull()?.url ?: ""
 }
